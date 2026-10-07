@@ -171,9 +171,11 @@ locals {
     SPRING_RABBITMQ_PORT          = tostring(local.mq_port)
     SPRING_RABBITMQ_SSL_ENABLED   = tostring(local.mq_ssl)
     SPRING_ELASTICSEARCH_URIS     = "https://${aws_opensearch_domain.search.endpoint}:443"
-    MINIO_ENDPOINT                = "https://s3.${var.region}.amazonaws.com"
-    MINIO_BUCKETNAME              = aws_s3_bucket.media.id
-    MINIO_REGION                  = var.region
+    # See OpenSearchCompatibilityConfig: the ES 8 client needs this to talk to OpenSearch.
+    APP_SEARCH_OPENSEARCHCOMPATIBILITY = "true"
+    MINIO_ENDPOINT                     = "https://s3.${var.region}.amazonaws.com"
+    MINIO_BUCKETNAME                   = aws_s3_bucket.media.id
+    MINIO_REGION                       = var.region
     # Empty keys override the local defaults, so MinioConfig uses the task role.
     MINIO_ACCESSKEY       = ""
     MINIO_SECRETKEY       = ""
