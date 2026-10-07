@@ -9,7 +9,8 @@ env/         Everything else. One workspace per environment: staging, production
 
 ```bash
 cd infra/terraform/bootstrap
-terraform init && terraform apply          # writes ../env/backend.hcl
+terraform init
+terraform apply -var alert_email=you@example.com   # writes ../env/backend.hcl
 
 cd ../env
 terraform init -backend-config=backend.hcl
@@ -39,6 +40,17 @@ works, and switching later only needs `use_lockfile = true` in backend.hcl.
 bootstrap/ keeps its own state locally (bootstrap/terraform.tfstate, not
 committed), since it creates the bucket remote state lives in. Losing it only
 means importing the bucket and table again; it does not touch env/ state.
+
+bootstrap/ also holds the account-wide budget: an email when usage passes
+USD 10 in a month, or is forecast to. It counts usage before credits, so it
+fires while the promotional credits are still paying.
+
+Amazon MQ (RabbitMQ) is created only in the `production` workspace, since the
+smallest broker in ap-southeast-1 (mq.m7g.medium) costs about USD 0.17 an
+hour. Staging leaves it out; override with `-var enable_amazon_mq=true` if
+needed. The broker is private, accepts AMQPS (5671) from inside the VPC only,
+and its credentials are generated and kept in Secrets Manager under
+`c2csectrade-production/rabbitmq`.
 
 Cost note: the NAT gateway is billed by the hour whether used or not. Destroy
 staging when it is idle.
