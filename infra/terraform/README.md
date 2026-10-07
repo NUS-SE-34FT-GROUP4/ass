@@ -123,6 +123,18 @@ or 0.47 on Amazon MQ. Production starts around USD 0.60 an hour and grows with s
 Everything is billed by the hour whether used or not: destroy staging when
 idle, and bring production up only for the load test and the presentation.
 
+### Apply / destroy schedule (presentation on 21 October)
+
+| When | staging | production |
+|---|---|---|
+| 10/8 | Trial apply with every service at `desired_count = 0`, then destroy | — |
+| 10/11 – 10/16 | Up continuously for integration; destroyed after the code freeze | — |
+| 10/15 | — | Up for the load test and scaling recording, then destroyed |
+| 10/17 | — | Destroy-and-rebuild drill, then destroyed |
+| 10/20 – 10/21 | — | Up from the rehearsal; destroyed after the presentation |
+
+About USD 77 of the USD 115 credits; the rest is buffer.
+
 bootstrap/ keeps its own state locally (bootstrap/terraform.tfstate, not
 committed), since it creates the bucket remote state lives in. Its budget
 emails when usage passes USD 10 in a month, counting usage before credits.
