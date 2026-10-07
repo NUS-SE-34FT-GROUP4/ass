@@ -7,7 +7,8 @@
 #   frontend  ESLint (no autofix) and production build of the Vue app
 #   gitleaks  secrets anywhere in the git history
 #   trivy     known vulnerabilities in Maven/npm dependencies and
-#             misconfigurations in Dockerfiles and Terraform
+#             misconfigurations in Dockerfiles and Terraform; fails on any
+#             CRITICAL finding not accepted in .trivyignore.yaml
 #
 # Gitleaks and Trivy are downloaded as release binaries checked against
 # pinned SHA-256 sums rather than through third-party actions.
@@ -130,15 +131,15 @@ jobs:
       - name: Resolve Maven dependencies
         run: mvn -B -ntp -q test-compile
 
-      # Report only for now: the inherited Spring Boot 3.2.3 dependencies
-      # already carry CRITICAL findings, so failing here would block every
-      # push. Set --exit-code 1 once the dependencies are upgraded; the
-      # release gate (no CRITICAL) is enforced on the images in CD.
+      # HIGH and CRITICAL go into the report; the gate below fails the job
+      # on CRITICAL only. Accepted findings, each with a reason and an
+      # expiry date, are in .trivyignore.yaml.
       - name: Scan dependencies and configuration
         run: |
           "$RUNNER_TEMP/trivy" fs . \
             --scanners vuln,misconfig \
             --severity HIGH,CRITICAL \
+            --ignorefile .trivyignore.yaml \
             --skip-dirs frontend/node_modules \
             --offline-scan \
             --skip-version-check \
@@ -153,6 +154,19 @@ jobs:
             echo '```'
             echo 'Full table in the trivy-report artifact.'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail on CRITICAL findings
+        run: |
+          "$RUNNER_TEMP/trivy" fs . \
+            --scanners vuln,misconfig \
+            --severity CRITICAL \
+            --ignorefile .trivyignore.yaml \
+            --skip-dirs frontend/node_modules \
+            --offline-scan \
+            --skip-version-check \
+            --no-progress \
+            --exit-code 1 \
+            --format table
 
       - name: Upload report
         if: always()
