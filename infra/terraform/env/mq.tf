@@ -124,8 +124,10 @@ resource "aws_ecs_task_definition" "rabbitmq" {
       { name = "RABBITMQ_DEFAULT_USER", valueFrom = "${aws_secretsmanager_secret.mq.arn}:username::" },
       { name = "RABBITMQ_DEFAULT_PASS", valueFrom = "${aws_secretsmanager_secret.mq.arn}:password::" },
     ]
+    # Only probe the port: rabbitmq-diagnostics runs as root and creates a
+    # root-owned .erlang.cookie that the server then cannot read.
     healthCheck = {
-      command     = ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      command     = ["CMD-SHELL", "nc -z 127.0.0.1 5672 || exit 1"]
       interval    = 15
       timeout     = 10
       retries     = 5
