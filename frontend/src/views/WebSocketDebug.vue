@@ -73,11 +73,9 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
 import WebSocketService from '@/services/WebSocketService';
 import emitter from '@/eventBus';
 
-const router = useRouter();
 const currentUser = ref({});
 const testRecipient = ref('');
 const testMessage = ref('');
