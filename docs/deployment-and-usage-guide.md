@@ -85,7 +85,7 @@ docker-compose up -d mysql redis rabbitmq elasticsearch minio
 # Backend development
 cd /Users/Kiyu/IdeaProjects/temaple/c2csectrade
 mvn clean install
-mvn spring-boot:run
+mvn -pl core spring-boot:run      # Search: -pl search, Chat: -pl chat
 
 # Frontend development
 cd frontend

@@ -185,7 +185,7 @@ make restart
         ```bash
         mvn clean package -DskipTests
         ```
-        This produces `c2c-platform-0.0.1-SNAPSHOT.jar` in `target/`.
+        This builds every module. Each service jar lands in its own module, for example `core/target/c2c-core-0.0.1-SNAPSHOT.jar`; `search` and `chat` follow the same pattern.
 
     -   **Frontend (Vue.js)**
         ```bash
