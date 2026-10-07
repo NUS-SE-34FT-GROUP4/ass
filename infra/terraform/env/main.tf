@@ -2,9 +2,12 @@
 #   terraform workspace select staging   (or production)
 
 locals {
-  name = "c2csectrade-${terraform.workspace}"
-  azs  = slice(data.aws_availability_zones.available.names, 0, var.az_count)
+  name    = "c2csectrade-${terraform.workspace}"
+  azs     = slice(data.aws_availability_zones.available.names, 0, var.az_count)
+  is_prod = terraform.workspace == "production"
 }
+
+data "aws_caller_identity" "current" {}
 
 data "aws_availability_zones" "available" {
   state = "available"
