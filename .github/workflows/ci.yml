@@ -1,0 +1,163 @@
+# Continuous integration: runs on every pull request (against the result of
+# merging it into its base branch) and again after each merge to main.
+#
+# Jobs are independent so that one failure does not hide another, and their
+# names are what main's branch protection lists as required checks:
+#   backend   Maven build and unit tests for common, core, search and chat
+#   frontend  ESLint (no autofix) and production build of the Vue app
+#   gitleaks  secrets anywhere in the git history
+#   trivy     known vulnerabilities in Maven/npm dependencies and
+#             misconfigurations in Dockerfiles and Terraform
+#
+# Gitleaks and Trivy are downloaded as release binaries checked against
+# pinned SHA-256 sums rather than through third-party actions.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+  TRIVY_VERSION: 0.74.0
+  TRIVY_SHA256: 2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same JDK as the runtime image (amazoncorretto:17)
+      - uses: actions/setup-java@v4
+        with:
+          distribution: corretto
+          java-version: '17'
+          cache: maven
+
+      - name: Build and test
+        run: mvn -B -ntp verify
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: '*/target/surefire-reports/'
+          retention-days: 7
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same Node major as the frontend image (node:18-alpine)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci --no-audit --no-fund
+
+      # npm run lint rewrites files; CI only reports
+      - name: Lint
+        run: npx vue-cli-service lint --no-fix
+
+      - name: Build
+        run: npm run build
+
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # scan every commit, not just the latest
+
+      - name: Install Gitleaks
+        run: |
+          curl -sSfL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz -C "$RUNNER_TEMP" gitleaks
+
+      - name: Scan git history
+        run: $RUNNER_TEMP/gitleaks git . --redact --no-banner --verbose --exit-code 1
+
+  trivy:
+    name: trivy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Trivy
+        run: |
+          curl -sSfL -o trivy.tar.gz \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  trivy.tar.gz" | sha256sum -c -
+          tar -xzf trivy.tar.gz -C "$RUNNER_TEMP" trivy
+
+      # Trivy resolves the POMs from ~/.m2. Fetching them itself from Maven
+      # Central gets runner IPs rate-limited (429), so Maven fills the
+      # cache first and Trivy scans offline.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: corretto
+          java-version: '17'
+          cache: maven
+
+      - name: Resolve Maven dependencies
+        run: mvn -B -ntp -q test-compile
+
+      # Report only for now: the inherited Spring Boot 3.2.3 dependencies
+      # already carry CRITICAL findings, so failing here would block every
+      # push. Set --exit-code 1 once the dependencies are upgraded; the
+      # release gate (no CRITICAL) is enforced on the images in CD.
+      - name: Scan dependencies and configuration
+        run: |
+          "$RUNNER_TEMP/trivy" fs . \
+            --scanners vuln,misconfig \
+            --severity HIGH,CRITICAL \
+            --skip-dirs frontend/node_modules \
+            --offline-scan \
+            --skip-version-check \
+            --no-progress \
+            --exit-code 0 \
+            --format table \
+            --output trivy-report.txt
+          {
+            echo '## Trivy: HIGH and CRITICAL findings'
+            echo '```'
+            grep -E '^(Total|Failures):|\((pom|npm|dockerfile|terraform)\)$' trivy-report.txt || echo 'No findings'
+            echo '```'
+            echo 'Full table in the trivy-report artifact.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-report.txt
+          retention-days: 14
