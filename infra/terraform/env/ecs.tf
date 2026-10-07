@@ -173,9 +173,12 @@ locals {
     SPRING_ELASTICSEARCH_URIS     = "https://${aws_opensearch_domain.search.endpoint}:443"
     # See OpenSearchCompatibilityConfig: the ES 8 client needs this to talk to OpenSearch.
     APP_SEARCH_OPENSEARCHCOMPATIBILITY = "true"
-    MINIO_ENDPOINT                     = "https://s3.${var.region}.amazonaws.com"
-    MINIO_BUCKETNAME                   = aws_s3_bucket.media.id
-    MINIO_REGION                       = var.region
+    # The 8.18 client cannot decode OpenSearch's cluster health response, so
+    # the indicator would report DOWN and the ALB would keep replacing tasks.
+    MANAGEMENT_HEALTH_ELASTICSEARCH_ENABLED = "false"
+    MINIO_ENDPOINT                          = "https://s3.${var.region}.amazonaws.com"
+    MINIO_BUCKETNAME                        = aws_s3_bucket.media.id
+    MINIO_REGION                            = var.region
     # Empty keys override the local defaults, so MinioConfig uses the task role.
     MINIO_ACCESSKEY       = ""
     MINIO_SECRETKEY       = ""

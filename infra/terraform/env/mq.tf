@@ -65,10 +65,16 @@ resource "aws_vpc_security_group_ingress_rule" "mq_from_services" {
   description                  = local.mq_managed ? "AMQPS" : "AMQP"
 }
 
-resource "aws_vpc_security_group_egress_rule" "mq_all" {
+# The broker itself makes no outbound connections. In container mode the task
+# ENI also pulls the image and reads its secret, over HTTPS through NAT.
+resource "aws_vpc_security_group_egress_rule" "mq_https" {
+  count             = local.mq_managed ? 0 : 1
   security_group_id = aws_security_group.mq.id
-  ip_protocol       = "-1"
+  ip_protocol       = "tcp"
+  from_port         = 443
+  to_port           = 443
   cidr_ipv4         = "0.0.0.0/0"
+  description       = "Image pull and Secrets Manager through NAT"
 }
 
 resource "aws_mq_broker" "rabbitmq" {

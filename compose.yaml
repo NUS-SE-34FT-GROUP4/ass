@@ -62,7 +62,7 @@ services:
 
   # Elasticsearch
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.18.8
     container_name: c2csectrade-elasticsearch
     environment:
       - discovery.type=single-node
