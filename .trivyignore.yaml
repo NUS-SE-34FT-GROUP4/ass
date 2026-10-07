@@ -7,14 +7,14 @@ vulnerabilities:
   # controllers return JSON) and none uses XsltView. The fix ships only in
   # Spring Framework 7.0.9, i.e. Spring Boot 4.
   - id: CVE-2026-47884
-    statement: XsltView is not used; fixed only in Spring Framework 7
+    statement: XsltView is not used; fixed only in Spring Framework 7 (https://github.com/NUS-SE-34FT-GROUP4/ass/issues/8)
     expired_at: 2026-11-16
 
   # kaptcha 2.3.2 (last release) generates captcha text with java.util.Random.
   # KaptchaConfig replaces the text producer with SecureTextCreator
   # (SecureRandom), so the vulnerable code is never called.
   - id: CVE-2018-18531
-    statement: Mitigated by SecureTextCreator; no fixed kaptcha release exists
+    statement: Mitigated by SecureTextCreator; no fixed kaptcha release exists (https://github.com/NUS-SE-34FT-GROUP4/ass/issues/9)
     expired_at: 2026-11-16
 
 misconfigurations:
@@ -25,7 +25,7 @@ misconfigurations:
     paths:
       - infra/terraform/env/security.tf
       - infra/terraform/env/mq.tf
-    statement: Egress limited to HTTPS through NAT; VPC endpoints not affordable
+    statement: Egress limited to HTTPS through NAT; VPC endpoints not affordable (https://github.com/NUS-SE-34FT-GROUP4/ass/issues/11)
     expired_at: 2026-11-16
 
   # The ALB listens on HTTP only, and only to CloudFront's origin-facing
@@ -34,5 +34,5 @@ misconfigurations:
   - id: AWS-0054
     paths:
       - infra/terraform/env/edge.tf
-    statement: TLS terminates at CloudFront; the ALB accepts CloudFront only
+    statement: TLS terminates at CloudFront; the ALB accepts CloudFront only (https://github.com/NUS-SE-34FT-GROUP4/ass/issues/11)
     expired_at: 2026-11-16
