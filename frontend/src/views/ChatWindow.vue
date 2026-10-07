@@ -1,0 +1,381 @@
+<template>
+  <div class="chat-container">
+    <div class="chat-header">
+      <h3>Chat with {{ displayName }}</h3>
+    </div>
+
+    <div class="messages-area" ref="messagesArea">
+      <div
+        v-for="(msg, index) in messages"
+        :key="index"
+        :class="['message', msg.isSystemMessage ? 'system' : (msg.sender === currentUsername ? 'sent' : 'received')]"
+      >
+        <div v-if="msg.isSystemMessage" class="system-badge">🔔 System Message</div>
+        <div class="message-header" v-if="!msg.isSystemMessage">
+          <strong>{{ msg.senderDisplayName || msg.sender }}</strong>
+          <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
+        </div>
+        <div class="message-content">{{ msg.content }}</div>
+      </div>
+      <div v-if="messages.length === 0" class="no-messages">
+        No messages yet. Say hello!
+      </div>
+    </div>
+
+    <form @submit.prevent="sendMessage" class="input-area">
+      <input
+        v-model="newMessage"
+        placeholder="Type a message..."
+        class="message-input"
+      />
+      <button
+        type="submit"
+        class="send-btn"
+        :disabled="!newMessage.trim()"
+      >
+        Send
+      </button>
+    </form>
+
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted, nextTick, watch, defineProps } from 'vue';
+import { chatService } from '@/services/chatService';
+import emitter from '@/eventBus';
+import WebSocketService from '@/services/WebSocketService';
+
+const props = defineProps({
+  recipientUsername: {
+    type: String,
+    required: true
+  },
+  recipientDisplayName: {
+    type: String,
+    default: ''
+  },
+  currentUsername: {
+    type: String,
+    required: true
+  }
+});
+
+const displayName = computed(() => props.recipientDisplayName || props.recipientUsername);
+
+const messages = ref([]);
+const newMessage = ref('');
+const messagesArea = ref(null);
+
+// Format time
+const formatTime = (timestamp) => {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffInHours = (now - date) / (1000 * 60 * 60);
+
+  if (diffInHours < 24) {
+    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  } else {
+    return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }) + ' ' +
+           date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  }
+};
+
+// Scroll to the bottom
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (messagesArea.value) {
+      messagesArea.value.scrollTop = messagesArea.value.scrollHeight;
+    }
+  });
+};
+
+// Load the chat history
+const loadHistory = async () => {
+  try {
+    const response = await chatService.getChatHistory(props.recipientUsername);
+    messages.value = response.data.reverse(); // Reverse so the newest message is at the bottom
+    scrollToBottom();
+
+    // Mark messages as read
+    await chatService.markAsRead(props.recipientUsername);
+  } catch (error) {
+    console.error('Failed to load chat history:', error);
+  }
+};
+
+// Callback for a new incoming message
+const onMessageReceived = (message) => {
+  console.log('[ChatWindow] Message received:', message);
+  console.log('[ChatWindow] Current user:', props.currentUsername);
+  console.log('[ChatWindow] Chatting with:', props.recipientUsername);
+  console.log('[ChatWindow] Is system message:', message.isSystemMessage);
+
+  // System message: show only to its recipient (in any conversation)
+  if (message.isSystemMessage) {
+    console.log('[ChatWindow] System message, recipient:', message.recipient, 'current user:', props.currentUsername);
+    // Show it only if the current user is the recipient
+    if (message.recipient === props.currentUsername) {
+      console.log('[ChatWindow] ✅ Recipient matches, adding to the message list');
+      messages.value.push(message);
+      scrollToBottom();
+    } else {
+      console.log('[ChatWindow] ⚠️ Recipient does not match, ignoring');
+    }
+  } else {
+    // Regular message: only add messages for the current conversation
+    if (message.sender === props.recipientUsername || message.recipient === props.recipientUsername) {
+      console.log('[ChatWindow] Showing regular message');
+      messages.value.push(message);
+      scrollToBottom();
+
+      // Mark incoming messages as read
+      if (message.sender === props.recipientUsername) {
+        chatService.markAsRead(props.recipientUsername);
+      }
+    }
+  }
+};
+
+// Send a message
+const sendMessage = () => {
+  if (newMessage.value.trim()) {
+    const chatMessage = {
+      sender: props.currentUsername,
+      recipient: props.recipientUsername,
+      content: newMessage.value,
+      type: 'CHAT'
+    };
+
+    WebSocketService.sendMessage(chatMessage);
+    newMessage.value = '';
+  }
+};
+
+// Reload the history when recipientUsername changes
+watch(() => props.recipientUsername, () => {
+  messages.value = [];
+  loadHistory();
+});
+
+onMounted(() => {
+  loadHistory();
+  emitter.on('chat-message', onMessageReceived);
+});
+
+onUnmounted(() => {
+  emitter.off('chat-message', onMessageReceived);
+});
+</script>
+
+<style scoped>
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  border: none;
+  background: white;
+  overflow: hidden;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.chat-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  line-height: 1;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.messages-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+}
+
+.message {
+  margin-bottom: 15px;
+  max-width: 70%;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message.sent {
+  margin-left: auto;
+}
+
+.message.received {
+  margin-right: auto;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  font-size: 12px;
+}
+
+.message.sent .message-header {
+  flex-direction: row-reverse;
+}
+
+.message-time {
+  color: #666;
+  font-size: 11px;
+}
+
+.message-content {
+  padding: 12px 16px;
+  border-radius: 12px;
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+
+.message.sent .message-content {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.message.received .message-content {
+  background: white;
+  color: #333;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.message.system {
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.system-badge {
+  font-size: 11px;
+  font-weight: bold;
+  color: #f57c00;
+  margin-bottom: 5px;
+  text-align: center;
+}
+
+.message.system .message-content {
+  background: #fff3cd;
+  color: #333;
+  border-left: 4px solid #ffa000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.message.system .message-header {
+  justify-content: center;
+  color: #f57c00;
+}
+
+.no-messages {
+  text-align: center;
+  color: #999;
+  padding: 50px 20px;
+  font-size: 15px;
+}
+
+.input-area {
+  display: flex;
+  gap: 10px;
+  padding: 20px;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+}
+
+.message-input {
+  flex: 1;
+  padding: 12px 18px;
+  border: 2px solid #e0e0e0;
+  border-radius: 24px;
+  outline: none;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.message-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.message-input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.send-btn {
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.send-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.send-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.connection-status {
+  padding: 8px 20px;
+  background: #fff3cd;
+  color: #856404;
+  text-align: center;
+  font-size: 12px;
+  border-top: 1px solid #ffeeba;
+}
+</style>
