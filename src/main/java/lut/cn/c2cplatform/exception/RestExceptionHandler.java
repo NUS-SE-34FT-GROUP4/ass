@@ -41,6 +41,15 @@ public class RestExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    @ResponseBody
+    public ResponseEntity<?> handleResponseStatus(org.springframework.web.server.ResponseStatusException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("error", ex.getStatusCode().toString());
+        body.put("message", ex.getReason());
+        return ResponseEntity.status(ex.getStatusCode()).body(body);
+    }
+
     @ExceptionHandler(Exception.class)
     @ResponseBody
     public ResponseEntity<?> handleGeneric(Exception ex) {

@@ -51,6 +51,7 @@ CREATE TABLE `users` (
     `email` VARCHAR(100) NOT NULL COMMENT 'User email, unique',
     `avatar_url` VARCHAR(255) NULL COMMENT 'User avatar URL',
     `balance` DECIMAL(15, 2) NOT NULL DEFAULT 0.00 COMMENT 'User balance',
+    `enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '0 while suspended by an administrator',
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Creation time',
     `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Last update time',
     PRIMARY KEY (`id`),

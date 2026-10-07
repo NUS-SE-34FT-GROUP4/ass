@@ -25,6 +25,13 @@
         </div>
       </div>
       <div class="stat-card">
+        <div class="stat-icon">⛔</div>
+        <div class="stat-info">
+          <div class="stat-label">Suspended</div>
+          <div class="stat-value">{{ suspendedCount }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
         <div class="stat-icon">🆕</div>
         <div class="stat-info">
           <div class="stat-label">New Today</div>
@@ -61,6 +68,11 @@
           @click="roleFilter = 'user'">
           Regular Users
         </button>
+        <button
+          :class="['filter-btn', { active: roleFilter === 'suspended' }]"
+          @click="roleFilter = 'suspended'">
+          Suspended
+        </button>
       </div>
     </div>
 
@@ -80,12 +92,13 @@
         <p>No matching users</p>
       </div>
       <div v-else class="users-grid">
-        <div v-for="user in filteredUsers" :key="user.id" class="user-card">
+        <div v-for="user in filteredUsers" :key="user.id" :class="['user-card', { suspended: isSuspended(user) }]">
           <div class="user-header">
             <img :src="getUserAvatar(user)" :alt="user.username" class="user-avatar" />
             <div class="user-badges">
               <span v-if="isAdmin(user)" class="badge badge-admin">👑 Admin</span>
               <span v-else class="badge badge-user">👤 User</span>
+              <span v-if="isSuspended(user)" class="badge badge-suspended">⛔ Suspended</span>
             </div>
           </div>
           <div class="user-body">
@@ -109,12 +122,21 @@
             <button @click="viewUserProducts(user)" class="action-btn">
               📦 View Products
             </button>
-            <button @click="openEditUsername(user)" class="action-btn">
-              ✏️ Rename
-            </button>
-            <button @click="deleteUser(user)" class="action-btn danger">
-              🗑️ Delete User
-            </button>
+            <!-- Administrator accounts are managed outside the back office -->
+            <template v-if="!isAdmin(user)">
+              <button @click="openEditUsername(user)" class="action-btn">
+                ✏️ Rename
+              </button>
+              <button v-if="isSuspended(user)" @click="reinstateUser(user)" class="action-btn">
+                ✅ Reinstate
+              </button>
+              <button v-else @click="suspendUser(user)" class="action-btn warning">
+                ⛔ Suspend
+              </button>
+              <button @click="deleteUser(user)" class="action-btn danger">
+                🗑️ Delete
+              </button>
+            </template>
           </div>
         </div>
       </div>
@@ -127,13 +149,13 @@
           <h2>✏️ Change Display Name</h2>
           <div class="edit-dialog-header">
             <span class="edit-dialog-label">Current display name</span>
-            <span class="edit-dialog-current">{{ editingUser?.username }}</span>
+            <span class="edit-dialog-current">{{ editingUser?.displayName || editingUser?.username }}</span>
           </div>
           <div class="edit-dialog-divider"></div>
           <div class="edit-input-group">
             <label class="edit-input-label">New display name</label>
             <input v-model="editUsername" placeholder="Enter a new display name..." class="edit-input" />
-            <div class="edit-dialog-tip">💡 Letters, digits and underscores only</div>
+            <div class="edit-dialog-tip">💡 Up to 100 characters, not used by another user</div>
           </div>
           <div class="edit-dialog-actions">
             <button @click="confirmEditUsername" class="confirm-btn" :disabled="!editUsername.trim()">
@@ -186,6 +208,8 @@ const adminCount = computed(() => {
   return users.value.filter(u => isAdmin(u)).length;
 });
 
+const suspendedCount = computed(() => users.value.filter(u => isSuspended(u)).length);
+
 const todayNewUsers = computed(() => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -207,6 +231,8 @@ const filteredUsers = computed(() => {
     result = result.filter(u => isAdmin(u));
   } else if (roleFilter.value === 'user') {
     result = result.filter(u => !isAdmin(u));
+  } else if (roleFilter.value === 'suspended') {
+    result = result.filter(u => isSuspended(u));
   }
 
   // Keyword filter
@@ -228,6 +254,10 @@ const isAdmin = (user) => {
     r.name === 'ROLE_ADMIN' || r.name === 'ADMIN'
   );
 };
+
+const isSuspended = (user) => user.enabled === false;
+
+const errorMessage = (e, fallback) => e.response?.data?.message || fallback;
 
 // Get a user's avatar
 const getUserAvatar = (user) => {
@@ -281,14 +311,38 @@ const deleteUser = async (user) => {
     fetchUsers();
   } catch (e) {
     console.error('Failed to delete user:', e);
-    toast('Failed to delete user, please try again', 'error');
+    toast(errorMessage(e, 'Failed to delete user, please try again'), 'error');
+  }
+};
+
+// Suspend: the user can no longer sign in, and their current session stops working
+const suspendUser = async (user) => {
+  if (!confirm(`Suspend ${user.username}? They will be signed out and unable to sign in until reinstated.`)) {
+    return;
+  }
+  try {
+    await axios.put(`/api/admin/users/${user.id}/suspend`);
+    toast(`${user.username} suspended`, 'success');
+    fetchUsers();
+  } catch (e) {
+    toast(errorMessage(e, 'Failed to suspend user'), 'error');
+  }
+};
+
+const reinstateUser = async (user) => {
+  try {
+    await axios.put(`/api/admin/users/${user.id}/reinstate`);
+    toast(`${user.username} reinstated`, 'success');
+    fetchUsers();
+  } catch (e) {
+    toast(errorMessage(e, 'Failed to reinstate user'), 'error');
   }
 };
 
 // Open the rename dialog
 const openEditUsername = (user) => {
   editingUser.value = user;
-  editUsername.value = user.username;
+  editUsername.value = user.displayName || user.username;
   showEditDialog.value = true;
 };
 
@@ -303,14 +357,14 @@ const closeEditDialog = () => {
 const confirmEditUsername = async () => {
   if (!editUsername.value.trim()) return;
   try {
-    await axios.post(`/api/admin/users/${editingUser.value.id}/edit-username`, {
-      username: editUsername.value
+    await axios.put(`/api/admin/users/${editingUser.value.id}/display-name`, {
+      displayName: editUsername.value.trim()
     });
     toast('Display name updated', 'success');
     fetchUsers();
     closeEditDialog();
   } catch (e) {
-    toast('Failed to update display name', 'error');
+    toast(errorMessage(e, 'Failed to update display name'), 'error');
   }
 };
 
@@ -600,6 +654,16 @@ onMounted(fetchUsers);
   color: #666;
 }
 
+.badge-suspended {
+  background: #ffb020;
+  color: white;
+}
+
+.user-card.suspended {
+  opacity: 0.75;
+  border-style: dashed;
+}
+
 .user-body {
   margin-bottom: 15px;
 }
@@ -643,7 +707,12 @@ onMounted(fetchUsers);
 
 .user-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
+}
+
+.user-actions .action-btn {
+  min-width: calc(50% - 5px);
 }
 
 .action-btn {
@@ -681,6 +750,16 @@ onMounted(fetchUsers);
 .action-btn.danger:hover {
   background: #cc0000;
   transform: scale(1.05);
+}
+
+.action-btn.warning {
+  background: #ffb020;
+  color: white;
+  border-color: transparent;
+}
+
+.action-btn.warning:hover {
+  background: #e09000;
 }
 
 /* Rename dialog */

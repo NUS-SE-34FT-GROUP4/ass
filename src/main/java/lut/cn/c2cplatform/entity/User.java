@@ -1,5 +1,6 @@
 package lut.cn.c2cplatform.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -12,10 +13,14 @@ public class User implements Serializable {
     private String username;
     private String displayName;
     private String email;
+    // Never serialised: User is returned as-is by /api/admin/users and /api/auth/register.
+    @JsonIgnore
     private String passwordHash;
+    @JsonIgnore
     private String paymentPasswordHash;
     private String avatarUrl;
     private java.math.BigDecimal balance; // User balance
+    private Boolean enabled; // false while suspended by an administrator
     private Instant createdAt;
     private Instant updatedAt;
     private Set<Role> roles;

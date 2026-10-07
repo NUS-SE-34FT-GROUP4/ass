@@ -9,18 +9,23 @@ import lut.cn.c2cplatform.mapper.UserMapper;
 import lut.cn.c2cplatform.service.ChatMessageService;
 import lut.cn.c2cplatform.service.ProductService;
 import lut.cn.c2cplatform.service.ReportService;
+import lut.cn.c2cplatform.service.UserAdministrationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private UserAdministrationService userAdministrationService;
 
     @Autowired
     private ReportService reportService;
@@ -44,12 +49,27 @@ public class AdminController {
     @DeleteMapping("/users/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
-        try {
-            userMapper.deleteById(id);
-            return ResponseEntity.ok("User deleted successfully");
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Error deleting user: " + e.getMessage());
-        }
+        userAdministrationService.delete(id);
+        return ResponseEntity.ok("User deleted successfully");
+    }
+
+    /** Blocks login, and rejects the user's existing tokens on their next request. */
+    @PutMapping("/users/{id}/suspend")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<User> suspendUser(@PathVariable Long id) {
+        return ResponseEntity.ok(userAdministrationService.suspend(id));
+    }
+
+    @PutMapping("/users/{id}/reinstate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<User> reinstateUser(@PathVariable Long id) {
+        return ResponseEntity.ok(userAdministrationService.reinstate(id));
+    }
+
+    @PutMapping("/users/{id}/display-name")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<User> renameUser(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(userAdministrationService.rename(id, body.get("displayName")));
     }
 
     @GetMapping("/reports")
