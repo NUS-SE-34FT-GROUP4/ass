@@ -12,4 +12,5 @@ public class MinioProperties {
     private String accessKey;
     private String secretKey;
     private String bucketName;
+    private String region; // set for S3; unset for local MinIO
 }
