@@ -14,7 +14,7 @@ env/         One environment. Workspaces: staging, production.
    /* (Vue SPA) -> S3 frontend    /media/* -> S3 media    /api/*, /ws/* -> ALB
                                                                   |
               ALB (public subnets, accepts CloudFront only)       |
-     /api/search/* -> search      /ws/* -> chat      anything else -> core
+     /api/search/* -> search   /ws/*, /api/chat/* -> chat   anything else -> core
                                                                   |
         ECS Fargate services (private subnets): core, search, chat
                                                                   |

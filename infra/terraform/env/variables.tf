@@ -115,7 +115,7 @@ variable "services" {
       cpu = 512, memory = 1024, desired_count = 1, paths = ["/api/search", "/api/search/*"], priority = 10
     }
     chat = {
-      cpu = 512, memory = 1024, desired_count = 1, paths = ["/ws", "/ws/*"], priority = 20
+      cpu = 512, memory = 1024, desired_count = 1, paths = ["/ws", "/ws/*", "/api/chat/*"], priority = 20
     }
   }
   validation {
