@@ -1,6 +1,6 @@
 package lut.cn.c2cplatform.config;
 
-import lut.cn.c2cplatform.security.JwtUtil;
+import lut.cn.c2cplatform.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -10,15 +10,18 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
 
 @Component
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
     @Autowired
-    private JwtUtil jwtUtil;
+    private JwtTokenProvider tokenProvider;
+
+    @Autowired
+    private UserDetailsService userDetailsService;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -28,29 +31,26 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             String authHeader = accessor.getFirstNativeHeader("Authorization");
 
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                System.err.println("[WS] Missing or invalid Authorization header on CONNECT");
                 throw new IllegalArgumentException("Unauthorized WebSocket CONNECT: missing Bearer token");
             }
 
+            // Same key and checks as JwtAuthenticationFilter for HTTP requests.
             String token = authHeader.substring(7);
-            try {
-                String username = jwtUtil.extractUsername(token);
-                System.out.println("[WS] User authenticated: " + username);
-
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                accessor.setUser(authentication);
-
-                // Make sure the Principal is stored in the WebSocket session
-                accessor.setLeaveMutable(true);
-
-                System.out.println("[WS] User principal set for: " + username);
-            } catch (Exception e) {
-                System.err.println("[WS] Authentication failed: " + e.getMessage());
-                e.printStackTrace();
+            if (!tokenProvider.validateToken(token)) {
                 throw new IllegalArgumentException("Unauthorized WebSocket CONNECT: invalid token");
             }
+            UserDetails user = userDetailsService.loadUserByUsername(tokenProvider.getUsernameFromToken(token));
+            if (!user.isEnabled()) {
+                throw new IllegalArgumentException("Unauthorized WebSocket CONNECT: account suspended");
+            }
+
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(user.getUsername(), null, user.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            accessor.setUser(authentication);
+
+            // Make sure the Principal is stored in the WebSocket session
+            accessor.setLeaveMutable(true);
         }
 
         return message;

@@ -30,10 +30,12 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         List<GrantedAuthority> authorities = user.getRoles() == null ? List.of() : user.getRoles().stream()
                .map(role -> new SimpleGrantedAuthority(role.getName()))
                .collect(Collectors.toList());
-        return new org.springframework.security.core.userdetails.User(
-                user.getUsername(),
-                user.getPasswordHash(),  // getPasswordHash, not getPassword
-                authorities
-        );
+        // A suspended account fails login (DisabledException) and its existing
+        // tokens stop working, since JwtAuthenticationFilter checks isEnabled().
+        return org.springframework.security.core.userdetails.User.withUsername(user.getUsername())
+                .password(user.getPasswordHash())  // getPasswordHash, not getPassword
+                .authorities(authorities)
+                .disabled(Boolean.FALSE.equals(user.getEnabled()))
+                .build();
     }
 }

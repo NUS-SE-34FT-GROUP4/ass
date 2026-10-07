@@ -16,5 +16,6 @@ public interface UserMapper {
     List<User> selectAll();
     int insert(User user);
     int update(User user);
+    int updateEnabled(@Param("id") Long id, @Param("enabled") boolean enabled);
     int deleteById(@Param("id") Long id);
 }

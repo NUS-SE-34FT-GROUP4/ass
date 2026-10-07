@@ -10,6 +10,7 @@
         <result property="email" column="email"/>
         <result property="avatarUrl" column="avatar_url"/>
         <result property="balance" column="balance"/>
+        <result property="enabled" column="enabled"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
@@ -40,6 +41,9 @@
     </insert>
     <update id="update" parameterType="lut.cn.c2cplatform.entity.User">
         UPDATE users SET username=#{username}, display_name=#{displayName}, password_hash=#{passwordHash}, payment_password_hash=#{paymentPasswordHash}, email=#{email}, avatar_url=#{avatarUrl}, balance=#{balance}, updated_at=#{updatedAt} WHERE id=#{id}
+    </update>
+    <update id="updateEnabled">
+        UPDATE users SET enabled=#{enabled} WHERE id=#{id}
     </update>
     <delete id="deleteById" parameterType="long">
         DELETE FROM users WHERE id=#{id}
