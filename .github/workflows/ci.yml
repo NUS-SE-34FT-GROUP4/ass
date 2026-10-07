@@ -128,7 +128,7 @@ jobs:
           cache: maven
 
       - name: Resolve Maven dependencies
-        run: mvn -B -ntp -q dependency:resolve
+        run: mvn -B -ntp -q test-compile
 
       # Report only for now: the inherited Spring Boot 3.2.3 dependencies
       # already carry CRITICAL findings, so failing here would block every
