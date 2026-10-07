@@ -1,20 +1,34 @@
 # Multi-stage Dockerfile for the c2csectrade backend
 
+# One Dockerfile builds every service: pass --build-arg MODULE=search or
+# MODULE=chat for the other two. Core is the default.
+
 # Stage 1: Build stage
 FROM maven:3.9-amazoncorretto-17 AS build
+ARG MODULE=core
 WORKDIR /app
 
-# Copy pom.xml and download dependencies (uses the Docker layer cache)
+# Copy the poms and download dependencies (uses the Docker layer cache)
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
+COPY common/pom.xml common/
+COPY core/pom.xml core/
+COPY search/pom.xml search/
+COPY chat/pom.xml chat/
+RUN mvn dependency:go-offline -B -pl ${MODULE} -am
 
-# Copy source code and build
-COPY src ./src
-RUN mvn clean package -DskipTests -B
+# Copy the shared library and the chosen service, then build only those
+COPY common/src ./common/src
+COPY ${MODULE}/src ./${MODULE}/src
+RUN mvn clean package -DskipTests -B -pl ${MODULE} -am
 
 # Stage 2: Runtime stage
 FROM amazoncorretto:17-alpine
+ARG MODULE=core
 WORKDIR /app
+
+# Every ECS service listens on 8080; Search and Chat default to other ports
+# only so they can run beside Core on a laptop.
+ENV SERVER_PORT=8080
 
 # Install curl for the health check
 RUN apk add --no-cache curl font-wqy-zenhei
@@ -25,7 +39,7 @@ RUN addgroup -g 1000 appuser && \
     chown -R appuser:appuser /app
 
 # Copy the jar from the build stage
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/${MODULE}/target/*.jar app.jar
 
 # Switch to the non-root user
 USER appuser

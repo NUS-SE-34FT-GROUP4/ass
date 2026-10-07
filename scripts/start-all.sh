@@ -47,7 +47,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 17) mvn clean package -DskipTests
 if [ $? -eq 0 ]; then
     echo "✓ Backend built"
     echo "Starting the Spring Boot application..."
-    JAVA_HOME=$(/usr/libexec/java_home -v 17) java -jar target/c2c-platform-0.0.1-SNAPSHOT.jar &
+    JAVA_HOME=$(/usr/libexec/java_home -v 17) java -jar core/target/c2c-core-0.0.1-SNAPSHOT.jar &
     BACKEND_PID=$!
     echo "✓ Backend started (PID: $BACKEND_PID)"
 else
