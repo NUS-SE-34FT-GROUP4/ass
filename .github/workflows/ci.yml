@@ -118,6 +118,18 @@ jobs:
           echo "${TRIVY_SHA256}  trivy.tar.gz" | sha256sum -c -
           tar -xzf trivy.tar.gz -C "$RUNNER_TEMP" trivy
 
+      # Trivy resolves the POMs from ~/.m2. Fetching them itself from Maven
+      # Central gets runner IPs rate-limited (429), so Maven fills the
+      # cache first and Trivy scans offline.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: corretto
+          java-version: '17'
+          cache: maven
+
+      - name: Resolve Maven dependencies
+        run: mvn -B -ntp -q dependency:resolve
+
       # Report only for now: the inherited Spring Boot 3.2.3 dependencies
       # already carry CRITICAL findings, so failing here would block every
       # push. Set --exit-code 1 once the dependencies are upgraded; the
@@ -128,6 +140,8 @@ jobs:
             --scanners vuln,misconfig \
             --severity HIGH,CRITICAL \
             --skip-dirs frontend/node_modules \
+            --offline-scan \
+            --skip-version-check \
             --no-progress \
             --exit-code 0 \
             --format table \
