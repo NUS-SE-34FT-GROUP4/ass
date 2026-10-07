@@ -81,6 +81,12 @@ resource "aws_iam_openid_connect_provider" "github" {
   client_id_list = ["sts.amazonaws.com"]
 }
 
+# OpenSearch needs this role before it can place a domain in a VPC, and unlike
+# ECS and ElastiCache it does not create it on first use.
+resource "aws_iam_service_linked_role" "opensearch" {
+  aws_service_name = "opensearchservice.amazonaws.com"
+}
+
 output "ecr_repository_urls" {
   value = { for k, r in aws_ecr_repository.service : k => r.repository_url }
 }
