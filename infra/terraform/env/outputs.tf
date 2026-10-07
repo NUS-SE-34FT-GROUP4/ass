@@ -74,7 +74,7 @@ output "opensearch_endpoint" {
 }
 
 output "rabbitmq_mode" {
-  value = var.rabbitmq_mode
+  value = local.rabbitmq_mode
 }
 
 output "rabbitmq_host" {

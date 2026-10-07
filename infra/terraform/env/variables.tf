@@ -26,14 +26,15 @@ variable "rabbitmq_mode" {
   description = <<-EOT
     How RabbitMQ is provided. Search indexing and Chat cross-instance delivery
     both depend on it, so it is never switched off.
-      amazon_mq  Amazon MQ broker (default, both workspaces)
-      container  rabbitmq:3.12-management task on ECS; cheaper, staging only,
-                 messages are lost when the task restarts
+      amazon_mq  Amazon MQ broker (production)
+      container  rabbitmq:3.12-management task on ECS (staging): about USD 0.14
+                 an hour cheaper; messages are lost when the task restarts
+    Null picks by workspace: container in staging, amazon_mq in production.
   EOT
   type        = string
-  default     = "amazon_mq"
+  default     = null
   validation {
-    condition     = contains(["amazon_mq", "container"], var.rabbitmq_mode)
+    condition     = var.rabbitmq_mode == null ? true : contains(["amazon_mq", "container"], var.rabbitmq_mode)
     error_message = "rabbitmq_mode must be amazon_mq or container."
   }
 }

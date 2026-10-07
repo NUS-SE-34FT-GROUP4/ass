@@ -1,12 +1,12 @@
 # RabbitMQ carries the domain events (Search indexing, Chat cross-instance
-# delivery and notifications), so every environment has one. By default both
-# workspaces use Amazon MQ. Setting rabbitmq_mode = "container" runs
-# rabbitmq:3.12-management on ECS instead: cheaper, staging only, and messages
-# do not survive a task restart.
+# delivery and notifications), so every environment has one. Production uses
+# Amazon MQ. Staging runs rabbitmq:3.12-management on ECS to stay within the
+# credit budget; its messages do not survive a task restart.
 
 locals {
-  mq_managed = var.rabbitmq_mode == "amazon_mq"
-  mq_user    = "c2csectrade"
+  rabbitmq_mode = coalesce(var.rabbitmq_mode, local.is_prod ? "amazon_mq" : "container")
+  mq_managed    = local.rabbitmq_mode == "amazon_mq"
+  mq_user       = "c2csectrade"
 
   # What the services are given, whichever way the broker is provided.
   mq_host = local.mq_managed ? (
@@ -17,10 +17,10 @@ locals {
 }
 
 resource "terraform_data" "rabbitmq_mode_guard" {
-  input = var.rabbitmq_mode
+  input = local.rabbitmq_mode
   lifecycle {
     precondition {
-      condition     = !(local.is_prod && var.rabbitmq_mode == "container")
+      condition     = !(local.is_prod && local.rabbitmq_mode == "container")
       error_message = "Production always uses Amazon MQ; the RabbitMQ container is a staging-only fallback."
     }
   }

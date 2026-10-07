@@ -26,7 +26,7 @@ env/         One environment. Workspaces: staging, production.
 | ECS tasks | 1 per service, one AZ | 1 to 4 per service, two AZs, target tracking |
 | RDS MySQL | single-AZ, no backups | Multi-AZ, 7-day backups, deletion protection |
 | OpenSearch | 1 node | 2 nodes, one per AZ |
-| RabbitMQ | Amazon MQ (or the container fallback) | Amazon MQ |
+| RabbitMQ | rabbitmq:3.12-management container on ECS | Amazon MQ |
 | GitHub role trusts | `main` and Environment `staging` | Environment `production` only |
 
 Every service validates JWTs itself with the key in `<env>/jwt`. Database,
@@ -80,16 +80,17 @@ owns the task count, so Terraform ignores both after creation.
 ## RabbitMQ
 
 Search indexing and Chat cross-instance delivery both run through RabbitMQ, so
-every environment has one. Both workspaces use Amazon MQ by default. To save
-money, staging can run `rabbitmq:3.12-management` on ECS instead:
+every environment has one. Production uses Amazon MQ (AMQPS on 5671). Staging
+runs `rabbitmq:3.12-management` on ECS to fit the credit budget (decided
+2026-10-07): the services find it at `rabbitmq.c2csectrade-staging.internal:5672`
+without TLS, and queued messages are lost if the task restarts. Credentials are
+in `<env>/rabbitmq` either way.
 
 ```bash
-terraform apply -var rabbitmq_mode=container      # staging only; production refuses
+terraform apply -var rabbitmq_mode=amazon_mq      # staging on Amazon MQ, if the budget allows
 ```
 
-The services find it at `rabbitmq.c2csectrade-staging.internal:5672` without
-TLS; queued messages are lost if the task restarts. Credentials are in
-`<env>/rabbitmq` either way.
+Production refuses `rabbitmq_mode=container`.
 
 ## Notes for the service owners
 
@@ -117,8 +118,8 @@ TLS; queued messages are lost if the task restarts. Credentials are in
 | ALB | 0.03 |
 | Public IPv4 addresses | 0.015 |
 
-Staging is about USD 0.47 an hour (about 11 a day), or 0.33 with the RabbitMQ
-container. Production starts around USD 0.60 an hour and grows with scaling.
+Staging is about USD 0.33 an hour (about 8 a day) with the RabbitMQ container,
+or 0.47 on Amazon MQ. Production starts around USD 0.60 an hour and grows with scaling.
 Everything is billed by the hour whether used or not: destroy staging when
 idle, and bring production up only for the load test and the presentation.
 
