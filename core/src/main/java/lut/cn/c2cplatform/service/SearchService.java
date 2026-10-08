@@ -74,14 +74,16 @@ public class SearchService {
 
             // 2. Price range filter
             if (request.getMinPrice() != null || request.getMaxPrice() != null) {
-                RangeQuery.Builder rangeBuilder = new RangeQuery.Builder().field("price");
+                // Since client 8.15 a range query is typed: number, date, term or untyped.
+                NumberRangeQuery.Builder rangeBuilder = new NumberRangeQuery.Builder().field("price");
                 if (request.getMinPrice() != null) {
-                    rangeBuilder.gte(co.elastic.clients.json.JsonData.of(request.getMinPrice().doubleValue()));
+                    rangeBuilder.gte(request.getMinPrice().doubleValue());
                 }
                 if (request.getMaxPrice() != null) {
-                    rangeBuilder.lte(co.elastic.clients.json.JsonData.of(request.getMaxPrice().doubleValue()));
+                    rangeBuilder.lte(request.getMaxPrice().doubleValue());
                 }
-                filterQueries.add(Query.of(q -> q.range(rangeBuilder.build())));
+                NumberRangeQuery priceRange = rangeBuilder.build();
+                filterQueries.add(Query.of(q -> q.range(r -> r.number(priceRange))));
             }
 
             // 3. Condition filter
