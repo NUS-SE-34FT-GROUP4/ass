@@ -67,16 +67,48 @@ public class EventPublisher {
     /**
      * Publish product created event
      */
-    public void publishProductCreated(Events.ProductCreatedEvent event) {
+    public void publishProductCreated(Events.ProductChangedEvent event) {
         try {
             rabbitTemplate.convertAndSend(
                 RabbitMQConfig.PRODUCT_EXCHANGE,
                 RabbitMQConfig.PRODUCT_CREATED_ROUTING_KEY,
                 event
             );
-            System.out.println("Published ProductCreatedEvent: " + event.getProductId());
+            System.out.println("Published product.created: " + event.getProductId());
         } catch (Exception e) {
-            System.err.println("Failed to publish ProductCreatedEvent: " + e.getMessage());
+            System.err.println("Failed to publish product.created: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Publish product updated event
+     */
+    public void publishProductUpdated(Events.ProductChangedEvent event) {
+        try {
+            rabbitTemplate.convertAndSend(
+                RabbitMQConfig.PRODUCT_EXCHANGE,
+                RabbitMQConfig.PRODUCT_UPDATED_ROUTING_KEY,
+                event
+            );
+            System.out.println("Published product.updated: " + event.getProductId());
+        } catch (Exception e) {
+            System.err.println("Failed to publish product.updated: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Publish product deleted event
+     */
+    public void publishProductDeleted(Events.ProductDeletedEvent event) {
+        try {
+            rabbitTemplate.convertAndSend(
+                RabbitMQConfig.PRODUCT_EXCHANGE,
+                RabbitMQConfig.PRODUCT_DELETED_ROUTING_KEY,
+                event
+            );
+            System.out.println("Published product.deleted: " + event.getProductId());
+        } catch (Exception e) {
+            System.err.println("Failed to publish product.deleted: " + e.getMessage());
         }
     }
 
