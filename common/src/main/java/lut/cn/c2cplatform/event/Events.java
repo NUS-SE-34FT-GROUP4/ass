@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -44,15 +45,35 @@ public class Events {
         private Date completedAt;
     }
 
+    /**
+     * Sent by Core on routing keys product.created and product.updated.
+     * Carries every field the search index stores, so Search can upsert
+     * the document without calling back into Core.
+     */
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class ProductCreatedEvent implements Serializable {
+    public static class ProductChangedEvent implements Serializable {
         private Long productId;
         private Long userId;
-        private String productName;
+        private String name;
+        private String description;
+        private BigDecimal price;
+        private Integer conditionLevel;
+        private String location;
         private String category;
-        private Date createdAt;
+        private Integer status;
+        private LocalDateTime createdAt;
+    }
+
+    /**
+     * Sent by Core on routing key product.deleted.
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ProductDeletedEvent implements Serializable {
+        private Long productId;
     }
 
     @Data
