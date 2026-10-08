@@ -1,0 +1,20 @@
+package sg.edu.nus.iss.c2csectrade.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.Date;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ChatMessageDTO {
+    private String sender;
+    private String recipient;
+    private String content;
+    private Date timestamp;
+    private Boolean isSystemMessage;  // Whether this is a system message
+}

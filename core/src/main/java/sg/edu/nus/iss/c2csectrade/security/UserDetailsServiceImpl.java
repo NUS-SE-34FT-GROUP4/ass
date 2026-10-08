@@ -1,0 +1,41 @@
+package sg.edu.nus.iss.c2csectrade.security;
+
+import sg.edu.nus.iss.c2csectrade.entity.User;
+import sg.edu.nus.iss.c2csectrade.mapper.UserMapper;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class UserDetailsServiceImpl implements UserDetailsService {
+    private final UserMapper userMapper;
+    public UserDetailsServiceImpl(UserMapper userMapper) {
+        this.userMapper = userMapper;
+    }
+    @Override
+    @Transactional
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        // Load the user with roles
+        User user = userMapper.selectByUsernameWithRoles(username);
+        if (user == null) {
+            throw new UsernameNotFoundException("User Not Found with username: " + username);
+        }
+        List<GrantedAuthority> authorities = user.getRoles() == null ? List.of() : user.getRoles().stream()
+               .map(role -> new SimpleGrantedAuthority(role.getName()))
+               .collect(Collectors.toList());
+        // A suspended account fails login (DisabledException) and its existing
+        // tokens stop working, since JwtAuthenticationFilter checks isEnabled().
+        return org.springframework.security.core.userdetails.User.withUsername(user.getUsername())
+                .password(user.getPasswordHash())  // getPasswordHash, not getPassword
+                .authorities(authorities)
+                .disabled(Boolean.FALSE.equals(user.getEnabled()))
+                .build();
+    }
+}

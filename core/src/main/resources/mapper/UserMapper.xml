@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="lut.cn.c2cplatform.mapper.UserMapper">
-    <resultMap id="UserResultMap" type="lut.cn.c2cplatform.entity.User">
+<mapper namespace="sg.edu.nus.iss.c2csectrade.mapper.UserMapper">
+    <resultMap id="UserResultMap" type="sg.edu.nus.iss.c2csectrade.entity.User">
         <id property="id" column="id"/>
         <result property="username" column="username"/>
         <result property="displayName" column="display_name"/>
@@ -16,8 +16,8 @@
     </resultMap>
 
     <!-- ResultMap with roles collection -->
-    <resultMap id="UserWithRolesResultMap" type="lut.cn.c2cplatform.entity.User" extends="UserResultMap">
-        <collection property="roles" ofType="lut.cn.c2cplatform.entity.Role" column="id" select="selectRolesByUserId"/>
+    <resultMap id="UserWithRolesResultMap" type="sg.edu.nus.iss.c2csectrade.entity.User" extends="UserResultMap">
+        <collection property="roles" ofType="sg.edu.nus.iss.c2csectrade.entity.Role" column="id" select="selectRolesByUserId"/>
     </resultMap>
 
     <select id="selectById" resultMap="UserResultMap">
@@ -35,11 +35,11 @@
     <select id="selectAllWithRoles" resultMap="UserWithRolesResultMap">
         SELECT * FROM users
     </select>
-    <insert id="insert" parameterType="lut.cn.c2cplatform.entity.User" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insert" parameterType="sg.edu.nus.iss.c2csectrade.entity.User" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO users (username, display_name, password_hash, email, avatar_url, created_at, updated_at)
         VALUES (#{username}, #{displayName}, #{passwordHash}, #{email}, #{avatarUrl}, #{createdAt}, #{updatedAt})
     </insert>
-    <update id="update" parameterType="lut.cn.c2cplatform.entity.User">
+    <update id="update" parameterType="sg.edu.nus.iss.c2csectrade.entity.User">
         UPDATE users SET username=#{username}, display_name=#{displayName}, password_hash=#{passwordHash}, payment_password_hash=#{paymentPasswordHash}, email=#{email}, avatar_url=#{avatarUrl}, balance=#{balance}, updated_at=#{updatedAt} WHERE id=#{id}
     </update>
     <update id="updateEnabled">
@@ -50,7 +50,7 @@
     </delete>
 
     <!-- helper select to load roles for user -->
-    <select id="selectRolesByUserId" resultType="lut.cn.c2cplatform.entity.Role">
+    <select id="selectRolesByUserId" resultType="sg.edu.nus.iss.c2csectrade.entity.Role">
         SELECT r.id, r.name
         FROM roles r
         INNER JOIN user_roles ur ON ur.role_id = r.id
