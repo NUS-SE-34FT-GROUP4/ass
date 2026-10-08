@@ -1,0 +1,38 @@
+# Accepted CRITICAL findings. CI fails on any other CRITICAL finding.
+# Every entry states why it does not apply or cannot be fixed yet, and
+# expires so that it is reviewed again.
+
+vulnerabilities:
+  # RCE/SSRF through Spring MVC's XsltView. No service renders views (all
+  # controllers return JSON) and none uses XsltView. The fix ships only in
+  # Spring Framework 7.0.9, i.e. Spring Boot 4.
+  - id: CVE-2026-47884
+    statement: XsltView is not used; fixed only in Spring Framework 7 (https://github.com/NUS-SE-34FT-GROUP4/ass/issues/8)
+    expired_at: 2026-11-16
+
+  # kaptcha 2.3.2 (last release) generates captcha text with java.util.Random.
+  # KaptchaConfig replaces the text producer with SecureTextCreator
+  # (SecureRandom), so the vulnerable code is never called.
+  - id: CVE-2018-18531
+    statement: Mitigated by SecureTextCreator; no fixed kaptcha release exists (https://github.com/NUS-SE-34FT-GROUP4/ass/issues/9)
+    expired_at: 2026-11-16
+
+misconfigurations:
+  # Fargate tasks reach ECR, Secrets Manager, S3, CloudWatch and Docker Hub
+  # over HTTPS through the NAT gateway. Egress is limited to TCP 443 outside
+  # the VPC; VPC interface endpoints would cost about USD 7 each per month.
+  - id: AWS-0104
+    paths:
+      - infra/terraform/env/security.tf
+      - infra/terraform/env/mq.tf
+    statement: Egress limited to HTTPS through NAT; VPC endpoints not affordable (https://github.com/NUS-SE-34FT-GROUP4/ass/issues/11)
+    expired_at: 2026-11-16
+
+  # The ALB listens on HTTP only, and only to CloudFront's origin-facing
+  # prefix list. Viewers always use HTTPS at CloudFront; an HTTPS listener
+  # needs an ACM certificate for a domain the project does not have.
+  - id: AWS-0054
+    paths:
+      - infra/terraform/env/edge.tf
+    statement: TLS terminates at CloudFront; the ALB accepts CloudFront only (https://github.com/NUS-SE-34FT-GROUP4/ass/issues/11)
+    expired_at: 2026-11-16
