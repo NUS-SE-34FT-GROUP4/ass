@@ -117,5 +117,24 @@ public class Events {
         private String template;
         private Date timestamp;
     }
+
+    /**
+     * Chat cross-instance delivery. Published to the chat fanout exchange;
+     * every Chat instance binds its own exclusive queue to the exchange and
+     * pushes the message only to users connected to itself. If the target
+     * user is offline, no instance delivers it; the message has already been
+     * persisted and can be pulled via the chat history REST API.
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ChatFanoutEvent implements Serializable {
+        private String targetUsername; // user the message should be delivered to
+        private String sender;
+        private String recipient;
+        private String content;
+        private Date timestamp;
+        private Boolean isSystemMessage;
+    }
 }
 
