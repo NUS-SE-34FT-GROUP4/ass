@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="lut.cn.c2cplatform.mapper.ProductMapper">
-    <resultMap id="ProductResultMap" type="lut.cn.c2cplatform.entity.Product">
+<mapper namespace="sg.edu.nus.iss.c2csectrade.mapper.ProductMapper">
+    <resultMap id="ProductResultMap" type="sg.edu.nus.iss.c2csectrade.entity.Product">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
         <result property="name" column="name"/>
@@ -83,11 +83,11 @@
         </if>
         created_at DESC
     </select>
-    <insert id="insert" parameterType="lut.cn.c2cplatform.entity.Product" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insert" parameterType="sg.edu.nus.iss.c2csectrade.entity.Product" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO pms_product (user_id, name, description, price, stock, condition_level, location, category, status, created_at, updated_at)
         VALUES (#{userId}, #{name}, #{description}, #{price}, #{stock}, #{conditionLevel}, #{location}, #{category}, #{status}, #{createdAt}, #{updatedAt})
     </insert>
-    <update id="update" parameterType="lut.cn.c2cplatform.entity.Product">
+    <update id="update" parameterType="sg.edu.nus.iss.c2csectrade.entity.Product">
         UPDATE pms_product
         SET user_id=#{userId}, name=#{name}, description=#{description}, price=#{price}, stock=#{stock}, condition_level=#{conditionLevel}, location=#{location}, category=#{category}, status=#{status}, updated_at=#{updatedAt}
         WHERE id=#{id}

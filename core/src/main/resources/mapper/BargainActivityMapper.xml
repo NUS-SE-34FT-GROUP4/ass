@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="lut.cn.c2cplatform.mapper.BargainActivityMapper">
+<mapper namespace="sg.edu.nus.iss.c2csectrade.mapper.BargainActivityMapper">
 
-    <resultMap id="BargainActivityResultMap" type="lut.cn.c2cplatform.entity.BargainActivity">
+    <resultMap id="BargainActivityResultMap" type="sg.edu.nus.iss.c2csectrade.entity.BargainActivity">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
         <result property="productId" column="product_id"/>
@@ -20,7 +20,7 @@
         <result property="helpCount" column="help_count"/>
     </resultMap>
 
-    <insert id="insert" parameterType="lut.cn.c2cplatform.entity.BargainActivity" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insert" parameterType="sg.edu.nus.iss.c2csectrade.entity.BargainActivity" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO bargain_activity (user_id, product_id, original_price, target_price, current_price, status, expire_time, created_at, updated_at)
         VALUES (#{userId}, #{productId}, #{originalPrice}, #{targetPrice}, #{currentPrice}, #{status}, #{expireTime}, #{createdAt}, #{updatedAt})
     </insert>
@@ -66,7 +66,7 @@
         ORDER BY ba.created_at DESC
     </select>
 
-    <update id="update" parameterType="lut.cn.c2cplatform.entity.BargainActivity">
+    <update id="update" parameterType="sg.edu.nus.iss.c2csectrade.entity.BargainActivity">
         UPDATE bargain_activity
         SET current_price = #{currentPrice},
             status = #{status},

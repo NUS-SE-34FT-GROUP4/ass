@@ -308,21 +308,21 @@ Features:
 ## Files delivered
 
 ### Backend files (Java)
-✅ `/src/main/java/lut/cn/c2cplatform/entity/Review.java`
-✅ `/src/main/java/lut/cn/c2cplatform/entity/CreditScore.java`
-✅ `/src/main/java/lut/cn/c2cplatform/mapper/ReviewMapper.java`
-✅ `/src/main/java/lut/cn/c2cplatform/mapper/CreditScoreMapper.java`
-✅ `/src/main/java/lut/cn/c2cplatform/mapper/OrderMapper.java` (fixed)
-✅ `/src/main/java/lut/cn/c2cplatform/dto/ReviewRequest.java`
-✅ `/src/main/java/lut/cn/c2cplatform/dto/ReviewResponse.java`
-✅ `/src/main/java/lut/cn/c2cplatform/dto/CreditScoreResponse.java`
-✅ `/src/main/java/lut/cn/c2cplatform/service/ReviewService.java`
-✅ `/src/main/java/lut/cn/c2cplatform/service/CreditScoreService.java`
-✅ `/src/main/java/lut/cn/c2cplatform/service/impl/ReviewServiceImpl.java`
-✅ `/src/main/java/lut/cn/c2cplatform/service/impl/CreditScoreServiceImpl.java`
-✅ `/src/main/java/lut/cn/c2cplatform/service/impl/OrderServiceImpl.java` (updated)
-✅ `/src/main/java/lut/cn/c2cplatform/controller/ReviewController.java`
-✅ `/src/main/java/lut/cn/c2cplatform/controller/CreditScoreController.java`
+✅ `/src/main/java/sg/edu/nus/iss/c2csectrade/entity/Review.java`
+✅ `/src/main/java/sg/edu/nus/iss/c2csectrade/entity/CreditScore.java`
+✅ `/src/main/java/sg/edu/nus/iss/c2csectrade/mapper/ReviewMapper.java`
+✅ `/src/main/java/sg/edu/nus/iss/c2csectrade/mapper/CreditScoreMapper.java`
+✅ `/src/main/java/sg/edu/nus/iss/c2csectrade/mapper/OrderMapper.java` (fixed)
+✅ `/src/main/java/sg/edu/nus/iss/c2csectrade/dto/ReviewRequest.java`
+✅ `/src/main/java/sg/edu/nus/iss/c2csectrade/dto/ReviewResponse.java`
+✅ `/src/main/java/sg/edu/nus/iss/c2csectrade/dto/CreditScoreResponse.java`
+✅ `/src/main/java/sg/edu/nus/iss/c2csectrade/service/ReviewService.java`
+✅ `/src/main/java/sg/edu/nus/iss/c2csectrade/service/CreditScoreService.java`
+✅ `/src/main/java/sg/edu/nus/iss/c2csectrade/service/impl/ReviewServiceImpl.java`
+✅ `/src/main/java/sg/edu/nus/iss/c2csectrade/service/impl/CreditScoreServiceImpl.java`
+✅ `/src/main/java/sg/edu/nus/iss/c2csectrade/service/impl/OrderServiceImpl.java` (updated)
+✅ `/src/main/java/sg/edu/nus/iss/c2csectrade/controller/ReviewController.java`
+✅ `/src/main/java/sg/edu/nus/iss/c2csectrade/controller/CreditScoreController.java`
 
 ### Frontend files (Vue)
 ✅ `/frontend/src/views/ReviewView.vue`
