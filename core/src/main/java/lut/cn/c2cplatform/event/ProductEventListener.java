@@ -1,44 +1,52 @@
 package lut.cn.c2cplatform.event;
 
-import lut.cn.c2cplatform.service.SearchService;
+import lut.cn.c2cplatform.entity.Product;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionalEventListener;
 
+/**
+ * Forwards in-process product events to RabbitMQ so the Search service can
+ * keep its index up to date. Events go out only after the transaction
+ * commits, so Search never indexes a change that was rolled back;
+ * fallbackExecution covers callers that run without a transaction.
+ */
 @Component
 public class ProductEventListener {
 
     @Autowired
-    private SearchService searchService;
+    private EventPublisher eventPublisher;
 
     @Async
-    @EventListener
+    @TransactionalEventListener(fallbackExecution = true)
     public void handleProductCreated(ProductCreatedEvent event) {
-        try {
-            searchService.indexProduct(event.getProduct());
-        } catch (Exception e) {
-            System.err.println("Failed to index product to Elasticsearch: " + e.getMessage());
-        }
+        eventPublisher.publishProductCreated(toChangedEvent(event.getProduct()));
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener(fallbackExecution = true)
     public void handleProductUpdated(ProductUpdatedEvent event) {
-        try {
-            searchService.indexProduct(event.getProduct());
-        } catch (Exception e) {
-            System.err.println("Failed to update product in Elasticsearch: " + e.getMessage());
-        }
+        eventPublisher.publishProductUpdated(toChangedEvent(event.getProduct()));
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener(fallbackExecution = true)
     public void handleProductDeleted(ProductDeletedEvent event) {
-        try {
-            searchService.deleteProduct(event.getProductId());
-        } catch (Exception e) {
-            System.err.println("Failed to delete product from Elasticsearch: " + e.getMessage());
-        }
+        eventPublisher.publishProductDeleted(new Events.ProductDeletedEvent(event.getProductId()));
+    }
+
+    static Events.ProductChangedEvent toChangedEvent(Product product) {
+        return new Events.ProductChangedEvent(
+                product.getId(),
+                product.getUserId(),
+                product.getName(),
+                product.getDescription(),
+                product.getPrice(),
+                product.getConditionLevel(),
+                product.getLocation(),
+                product.getCategory(),
+                product.getStatus(),
+                product.getCreatedAt());
     }
 }

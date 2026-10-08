@@ -8,6 +8,7 @@ import org.springframework.data.elasticsearch.core.query.HighlightQuery;
 import lut.cn.c2cplatform.document.ProductDocument;
 import lut.cn.c2cplatform.dto.SearchRequestDTO;
 import lut.cn.c2cplatform.entity.Product;
+import lut.cn.c2cplatform.event.Events;
 import lut.cn.c2cplatform.repository.ProductSearchRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -40,6 +41,17 @@ public class SearchService {
             productSearchRepository.save(doc);
         } catch (Exception e) {
             // Log it without breaking the main flow
+            System.err.println("Failed to index product: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Index a product from a product.created / product.updated message
+     */
+    public void indexProduct(Events.ProductChangedEvent event) {
+        try {
+            productSearchRepository.save(convertToDocument(event));
+        } catch (Exception e) {
             System.err.println("Failed to index product: " + e.getMessage());
         }
     }
@@ -265,6 +277,22 @@ public class SearchService {
         doc.setStatus(product.getStatus());
         doc.setCreatedAt(product.getCreatedAt());
         doc.setCategory(product.getCategory());
+        return doc;
+    }
+
+    private ProductDocument convertToDocument(Events.ProductChangedEvent event) {
+        ProductDocument doc = new ProductDocument();
+        doc.setId(String.valueOf(event.getProductId()));
+        doc.setProductId(event.getProductId());
+        doc.setUserId(event.getUserId());
+        doc.setName(event.getName());
+        doc.setDescription(event.getDescription());
+        doc.setPrice(event.getPrice());
+        doc.setConditionLevel(event.getConditionLevel());
+        doc.setLocation(event.getLocation());
+        doc.setStatus(event.getStatus());
+        doc.setCreatedAt(event.getCreatedAt());
+        doc.setCategory(event.getCategory());
         return doc;
     }
 

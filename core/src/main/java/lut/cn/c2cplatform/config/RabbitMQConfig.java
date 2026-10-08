@@ -3,6 +3,7 @@ package lut.cn.c2cplatform.config;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.DefaultJackson2JavaTypeMapper;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
@@ -38,8 +39,11 @@ public class RabbitMQConfig {
 
     // ============ Product Events ============
     public static final String PRODUCT_EXCHANGE = "product.exchange";
-    public static final String PRODUCT_CREATED_QUEUE = "product.created.queue";
     public static final String PRODUCT_CREATED_ROUTING_KEY = "product.created";
+    public static final String PRODUCT_UPDATED_ROUTING_KEY = "product.updated";
+    public static final String PRODUCT_DELETED_ROUTING_KEY = "product.deleted";
+    // One queue for all three keys so Search applies changes in the order they were made
+    public static final String SEARCH_PRODUCT_QUEUE = "search.product.queue";
     public static final String PRODUCT_STOCK_LOW_QUEUE = "product.stock.low.queue";
     public static final String PRODUCT_STOCK_LOW_ROUTING_KEY = "product.stock.low";
 
@@ -48,7 +52,13 @@ public class RabbitMQConfig {
      */
     @Bean
     public MessageConverter jsonMessageConverter() {
-        return new Jackson2JsonMessageConverter();
+        // Consumers that share a queue pick the handler from the type header,
+        // so the converter must accept our event classes; trust only that package.
+        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
+        DefaultJackson2JavaTypeMapper typeMapper = new DefaultJackson2JavaTypeMapper();
+        typeMapper.setTrustedPackages("lut.cn.c2cplatform.event");
+        converter.setJavaTypeMapper(typeMapper);
+        return converter;
     }
 
     /**
@@ -166,15 +176,29 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public Queue productCreatedQueue() {
-        return QueueBuilder.durable(PRODUCT_CREATED_QUEUE).build();
+    public Queue searchProductQueue() {
+        return QueueBuilder.durable(SEARCH_PRODUCT_QUEUE).build();
     }
 
     @Bean
-    public Binding productCreatedBinding() {
-        return BindingBuilder.bind(productCreatedQueue())
+    public Binding searchProductCreatedBinding() {
+        return BindingBuilder.bind(searchProductQueue())
                 .to(productExchange())
                 .with(PRODUCT_CREATED_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding searchProductUpdatedBinding() {
+        return BindingBuilder.bind(searchProductQueue())
+                .to(productExchange())
+                .with(PRODUCT_UPDATED_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding searchProductDeletedBinding() {
+        return BindingBuilder.bind(searchProductQueue())
+                .to(productExchange())
+                .with(PRODUCT_DELETED_ROUTING_KEY);
     }
 
     @Bean
