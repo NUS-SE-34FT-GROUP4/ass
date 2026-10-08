@@ -45,12 +45,24 @@ resource "aws_vpc_security_group_ingress_rule" "services_from_alb" {
   to_port                      = var.container_port
 }
 
-# Outbound: data stores in the VPC, plus ECR, Secrets Manager, S3 and
-# CloudWatch over HTTPS through the NAT gateway.
-resource "aws_vpc_security_group_egress_rule" "services_all" {
+# Outbound: the data stores inside the VPC, and HTTPS through the NAT gateway
+# for ECR, Secrets Manager, S3 and CloudWatch. Nothing else leaves the VPC.
+resource "aws_vpc_security_group_egress_rule" "services_vpc" {
   security_group_id = aws_security_group.services.id
-  ip_protocol       = "-1"
+  ip_protocol       = "tcp"
+  from_port         = 0
+  to_port           = 65535
+  cidr_ipv4         = var.vpc_cidr
+  description       = "Data stores and RabbitMQ inside the VPC"
+}
+
+resource "aws_vpc_security_group_egress_rule" "services_https" {
+  security_group_id = aws_security_group.services.id
+  ip_protocol       = "tcp"
+  from_port         = 443
+  to_port           = 443
   cidr_ipv4         = "0.0.0.0/0"
+  description       = "AWS APIs and image registries through NAT"
 }
 
 # One group per data store, each open on its own port to the services only.
