@@ -70,25 +70,6 @@ public class EventConsumer {
     }
 
     /**
-     * Process product created events
-     */
-    @RabbitListener(queues = RabbitMQConfig.PRODUCT_CREATED_QUEUE)
-    public void handleProductCreated(Events.ProductCreatedEvent event) {
-        try {
-            System.out.println("Processing ProductCreatedEvent: " + event.getProductId());
-
-            // Index to Elasticsearch
-            // TODO: Implement Elasticsearch indexing
-
-            // Notify followers if seller has followers
-            // TODO: Implement follower notification
-
-        } catch (Exception e) {
-            System.err.println("Error processing ProductCreatedEvent: " + e.getMessage());
-        }
-    }
-
-    /**
      * Process product stock low events
      */
     @RabbitListener(queues = RabbitMQConfig.PRODUCT_STOCK_LOW_QUEUE)
