@@ -3,12 +3,12 @@ package sg.edu.nus.iss.c2csectrade.controller;
 import sg.edu.nus.iss.c2csectrade.dto.ChatMessageDTO;
 import sg.edu.nus.iss.c2csectrade.dto.ConversationDTO;
 import sg.edu.nus.iss.c2csectrade.entity.ChatMessage;
+import sg.edu.nus.iss.c2csectrade.event.ChatMessageFanoutPublisher;
 import sg.edu.nus.iss.c2csectrade.service.ChatMessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 public class ChatController {
 
     @Autowired
-    private SimpMessagingTemplate messagingTemplate;
+    private ChatMessageFanoutPublisher chatMessageFanoutPublisher;
 
     @Autowired
     private ChatMessageService chatMessageService;
@@ -49,17 +49,16 @@ public class ChatController {
                     .isSystemMessage(false)
                     .build();
 
-            // Send to the recipient
-            messagingTemplate.convertAndSendToUser(
+            // Send to the recipient (via the fanout exchange, so it reaches
+            // whichever instance the recipient is connected to)
+            chatMessageFanoutPublisher.deliverToUser(
                 chatMessageDTO.getRecipient(),
-                "/queue/private",
                 responseDTO
             );
 
             // Also send to the sender (for multi-device sync)
-            messagingTemplate.convertAndSendToUser(
+            chatMessageFanoutPublisher.deliverToUser(
                 senderUsername,
-                "/queue/private",
                 responseDTO
             );
 
@@ -157,11 +156,10 @@ public class ChatController {
                     .isSystemMessage(true)
                     .build();
 
-            // Send to the recipient
+            // Send to the recipient via the fanout exchange
             System.out.println("[SYSTEM_MSG] Sending over WebSocket to user: " + chatMessageDTO.getRecipient());
-            messagingTemplate.convertAndSendToUser(
+            chatMessageFanoutPublisher.deliverToUser(
                 chatMessageDTO.getRecipient(),
-                "/queue/private",
                 responseDTO
             );
             System.out.println("[SYSTEM_MSG] WebSocket send complete");
@@ -231,10 +229,9 @@ public class ChatController {
                             .isSystemMessage(true)
                             .build();
 
-                    // Send to the user
-                    messagingTemplate.convertAndSendToUser(
+                    // Send to the user via the fanout exchange
+                    chatMessageFanoutPublisher.deliverToUser(
                         user.getUsername(),
-                        "/queue/private",
                         responseDTO
                     );
 
