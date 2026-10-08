@@ -5,6 +5,7 @@ import sg.edu.nus.iss.c2csectrade.entity.ChatMessage;
 import sg.edu.nus.iss.c2csectrade.entity.Product;
 import sg.edu.nus.iss.c2csectrade.entity.Report;
 import sg.edu.nus.iss.c2csectrade.entity.User;
+import sg.edu.nus.iss.c2csectrade.event.ChatMessageFanoutPublisher;
 import sg.edu.nus.iss.c2csectrade.mapper.UserMapper;
 import sg.edu.nus.iss.c2csectrade.service.ChatMessageService;
 import sg.edu.nus.iss.c2csectrade.service.ProductService;
@@ -12,7 +13,6 @@ import sg.edu.nus.iss.c2csectrade.service.ReportService;
 import sg.edu.nus.iss.c2csectrade.service.UserAdministrationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -37,7 +37,7 @@ public class AdminController {
     private ChatMessageService chatMessageService;
 
     @Autowired
-    private SimpMessagingTemplate messagingTemplate;
+    private ChatMessageFanoutPublisher chatMessageFanoutPublisher;
 
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
@@ -166,9 +166,8 @@ public class AdminController {
                     System.out.println("[DELIST] Message: " + ownerMessage);
 
                     try {
-                        messagingTemplate.convertAndSendToUser(
+                        chatMessageFanoutPublisher.deliverToUser(
                             owner.getUsername(),
-                            "/queue/private",
                             ownerResponseDTO
                         );
                         System.out.println("[DELIST] ✅✅ WebSocket message sent to product owner: " + owner.getUsername());
@@ -222,9 +221,8 @@ public class AdminController {
                         System.out.println("[DELIST] Message: " + reporterMessage);
 
                         try {
-                            messagingTemplate.convertAndSendToUser(
+                            chatMessageFanoutPublisher.deliverToUser(
                                 reporter.getUsername(),
-                                "/queue/private",
                                 reporterResponseDTO
                             );
                             System.out.println("[DELIST] ✅✅ WebSocket message sent to reporter: " + reporter.getUsername());
