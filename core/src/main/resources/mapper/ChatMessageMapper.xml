@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="lut.cn.c2cplatform.mapper.ChatMessageMapper">
+<mapper namespace="sg.edu.nus.iss.c2csectrade.mapper.ChatMessageMapper">
 
-    <resultMap id="ChatMessageResultMap" type="lut.cn.c2cplatform.entity.ChatMessage">
+    <resultMap id="ChatMessageResultMap" type="sg.edu.nus.iss.c2csectrade.entity.ChatMessage">
         <id property="id" column="id"/>
         <result property="senderId" column="sender_id"/>
         <result property="recipientId" column="recipient_id"/>
@@ -15,7 +15,7 @@
         <result property="isSystemMessage" column="is_system_message"/>
     </resultMap>
 
-    <insert id="insert" parameterType="lut.cn.c2cplatform.entity.ChatMessage"
+    <insert id="insert" parameterType="sg.edu.nus.iss.c2csectrade.entity.ChatMessage"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO chat_message (sender_id, recipient_id, content, timestamp, is_read, is_system_message)
         VALUES (#{senderId}, #{recipientId}, #{content}, #{timestamp}, #{isRead}, #{isSystemMessage})

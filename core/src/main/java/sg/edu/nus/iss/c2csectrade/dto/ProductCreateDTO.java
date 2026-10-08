@@ -1,0 +1,31 @@
+package sg.edu.nus.iss.c2csectrade.dto;
+
+import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class ProductCreateDTO {
+    private String name;
+    private String description;
+    private BigDecimal price;
+    private Integer conditionLevel;
+    private String location;
+    private String category; // Product category
+    private Integer stock; // Stock
+    // Add fields here as needed
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    public BigDecimal getPrice() { return price; }
+    public void setPrice(BigDecimal price) { this.price = price; }
+    public Integer getConditionLevel() { return conditionLevel; }
+    public void setConditionLevel(Integer conditionLevel) { this.conditionLevel = conditionLevel; }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
+    public Integer getStock() { return stock; }
+    public void setStock(Integer stock) { this.stock = stock; }
+}
