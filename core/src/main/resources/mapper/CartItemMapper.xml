@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="lut.cn.c2cplatform.mapper.CartItemMapper">
+<mapper namespace="sg.edu.nus.iss.c2csectrade.mapper.CartItemMapper">
 
-    <resultMap id="CartItemResultMap" type="lut.cn.c2cplatform.entity.CartItem">
+    <resultMap id="CartItemResultMap" type="sg.edu.nus.iss.c2csectrade.entity.CartItem">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
         <result property="productId" column="product_id"/>
@@ -12,13 +12,13 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <insert id="insert" parameterType="lut.cn.c2cplatform.entity.CartItem"
+    <insert id="insert" parameterType="sg.edu.nus.iss.c2csectrade.entity.CartItem"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO shopping_cart (user_id, product_id, quantity, created_at, updated_at)
         VALUES (#{userId}, #{productId}, #{quantity}, #{createdAt}, #{updatedAt})
     </insert>
 
-    <update id="update" parameterType="lut.cn.c2cplatform.entity.CartItem">
+    <update id="update" parameterType="sg.edu.nus.iss.c2csectrade.entity.CartItem">
         UPDATE shopping_cart
         SET quantity = #{quantity}, updated_at = #{updatedAt}
         WHERE id = #{id}
