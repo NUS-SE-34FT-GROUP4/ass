@@ -10,6 +10,14 @@ vulnerabilities:
     statement: XsltView is not used; fixed only in Spring Framework 7 (https://github.com/NUS-SE-34FT-GROUP4/ass/issues/8)
     expired_at: 2026-11-16
 
+  # Stream corruption with Server-Sent Events and view fragments in Spring
+  # MVC/WebFlux. No service uses SSE (SseEmitter, ServerSentEvent) or renders
+  # views. Rated CRITICAL in the Trivy DB from 2026-10-09; the fix ships only
+  # in Spring Framework 7.0.9, i.e. Spring Boot 4.
+  - id: CVE-2026-47890
+    statement: No SSE or view rendering is used; fixed only in Spring Framework 7 (https://github.com/NUS-SE-34FT-GROUP4/ass/issues/8)
+    expired_at: 2026-11-16
+
   # kaptcha 2.3.2 (last release) generates captcha text with java.util.Random.
   # KaptchaConfig replaces the text producer with SecureTextCreator
   # (SecureRandom), so the vulnerable code is never called.
