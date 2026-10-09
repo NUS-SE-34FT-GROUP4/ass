@@ -84,13 +84,6 @@
         </dependency>
     </dependencies>
 
-    <repositories>
-        <repository>
-            <id>projectlombok.org</id>
-            <url>https://projectlombok.org/edge-releases</url>
-        </repository>
-    </repositories>
-
     <build>
         <pluginManagement>
             <plugins>
