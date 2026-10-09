@@ -9,6 +9,9 @@
 #   trivy     known vulnerabilities in Maven/npm dependencies and
 #             misconfigurations in Dockerfiles and Terraform; fails on any
 #             CRITICAL finding not accepted in .trivyignore.yaml
+#   images    builds the core, search and chat images from the shared
+#             Dockerfile and scans each one with Trivy (OS packages, the
+#             application jar and secrets); fails on CRITICAL the same way
 #
 # Gitleaks and Trivy are downloaded as release binaries checked against
 # pinned SHA-256 sums rather than through third-party actions.
@@ -174,4 +177,76 @@ jobs:
         with:
           name: trivy-report
           path: trivy-report.txt
+          retention-days: 14
+
+  images:
+    name: images (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [core, search, chat]
+    env:
+      IMAGE: c2csectrade-${{ matrix.service }}:ci
+    steps:
+      - uses: actions/checkout@v4
+
+      # The same build CD will push to ECR; here it is only built and scanned.
+      - name: Build image
+        run: |
+          docker build \
+            --build-arg MODULE=${{ matrix.service }} \
+            --tag "$IMAGE" \
+            .
+          docker save "$IMAGE" --output image.tar
+
+      - name: Install Trivy
+        run: |
+          curl -sSfL -o trivy.tar.gz \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  trivy.tar.gz" | sha256sum -c -
+          tar -xzf trivy.tar.gz -C "$RUNNER_TEMP" trivy
+
+      # --offline-scan stops Trivy looking up jars on Maven Central, which
+      # rate-limits runner IPs; Spring Boot jars carry their own pom.properties.
+      - name: Scan image
+        run: |
+          "$RUNNER_TEMP/trivy" image \
+            --input image.tar \
+            --scanners vuln,secret \
+            --severity HIGH,CRITICAL \
+            --ignorefile .trivyignore.yaml \
+            --offline-scan \
+            --skip-version-check \
+            --no-progress \
+            --exit-code 0 \
+            --format table \
+            --output trivy-image-report.txt
+          {
+            echo "## Trivy: ${{ matrix.service }} image, HIGH and CRITICAL findings"
+            echo '```'
+            grep -E '^(Total):|\((alpine|jar)\)$' trivy-image-report.txt || echo 'No findings'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail on CRITICAL findings
+        run: |
+          "$RUNNER_TEMP/trivy" image \
+            --input image.tar \
+            --scanners vuln,secret \
+            --severity CRITICAL \
+            --ignorefile .trivyignore.yaml \
+            --offline-scan \
+            --skip-version-check \
+            --no-progress \
+            --exit-code 1 \
+            --format table
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-image-report-${{ matrix.service }}
+          path: trivy-image-report.txt
           retention-days: 14
