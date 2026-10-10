@@ -130,8 +130,9 @@ variable "container_port" {
 }
 
 variable "health_check_path" {
-  type    = string
-  default = "/actuator/health"
+  description = "Liveness only: a database, Redis or RabbitMQ outage must not make the ALB replace every task"
+  type        = string
+  default     = "/actuator/health/liveness"
 }
 
 variable "log_retention_days" {
