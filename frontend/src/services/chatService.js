@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Use relative base so it works in dev proxy and Docker Nginx
-const API_URL = '/api/chat';
+const API_BASE = process.env.VUE_APP_API_BASE_URL || '/api';
+const API_URL = `${API_BASE}/chat`;
 
 const getAuthHeader = () => {
     const token = localStorage.getItem('jwt_token');

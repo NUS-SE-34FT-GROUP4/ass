@@ -29,8 +29,9 @@ class WebSocketService {
 
         this.reconnecting = true;
 
-        // Use relative endpoint so it works in dev proxy and Docker Nginx
-        const socket = new SockJS('/ws');
+        // Read WS endpoint from env; fallback to relative /ws for dev proxy and Docker Nginx
+        const wsUrl = process.env.VUE_APP_WS_URL || '/ws';
+        const socket = new SockJS(wsUrl);
         this.stompClient = Stomp.over(socket);
 
         // Disable verbose debug logs but keep errors
