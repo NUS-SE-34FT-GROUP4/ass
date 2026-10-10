@@ -8,8 +8,8 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The load balancer keeps a task only while /actuator/health answers 200,
- * so the service must start and expose it without any other configuration.
+ * The load balancer keeps a task only while /actuator/health/liveness answers
+ * 200, so the service must start and expose it without any other configuration.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class SearchApplicationTest {
@@ -20,5 +20,10 @@ class SearchApplicationTest {
     @Test
     void healthEndpointIsUp() {
         assertThat(rest.getForObject("/actuator/health", String.class)).contains("\"status\":\"UP\"");
+    }
+
+    @Test
+    void livenessEndpointIsUp() {
+        assertThat(rest.getForObject("/actuator/health/liveness", String.class)).contains("\"status\":\"UP\"");
     }
 }
