@@ -13,8 +13,10 @@ public interface OrderMapper {
     Order findById(Integer id);
     void updateStatus(Order order);
     List<Order> findByUserId(@Param("userId") Integer userId);
-    List<Order> findExpiredOrders();
-    void batchUpdateStatusToExpired(@Param("orderIds") List<Integer> orderIds);
+    /** Moves a PENDING order to order.status; returns 0 if it already left PENDING. */
+    int updateStatusIfPending(Order order);
+    /** Marks every overdue PENDING order EXPIRED; returns how many changed. */
+    int expirePendingOrders();
 
     @Select("SELECT DISTINCT o.* FROM `orders` o " +
             "JOIN order_items oi ON o.id = oi.order_id " +
