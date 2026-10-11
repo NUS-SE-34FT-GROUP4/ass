@@ -10,8 +10,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * The load balancer keeps a task only while /actuator/health answers 200,
  * so the service must start and expose it without any other configuration.
+ * There is no broker or OpenSearch here: their indicators are off and the
+ * listener does not connect.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+        "management.health.rabbit.enabled=false",
+        "management.health.opensearch.enabled=false",
+        "spring.rabbitmq.listener.simple.auto-startup=false"
+})
 class SearchApplicationTest {
 
     @Autowired

@@ -8,7 +8,6 @@ import org.springframework.data.elasticsearch.core.query.HighlightQuery;
 import sg.edu.nus.iss.c2csectrade.document.ProductDocument;
 import sg.edu.nus.iss.c2csectrade.dto.SearchRequestDTO;
 import sg.edu.nus.iss.c2csectrade.entity.Product;
-import sg.edu.nus.iss.c2csectrade.event.Events;
 import sg.edu.nus.iss.c2csectrade.repository.ProductSearchRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -42,28 +41,6 @@ public class SearchService {
         } catch (Exception e) {
             // Log it without breaking the main flow
             System.err.println("Failed to index product: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Index a product from a product.created / product.updated message
-     */
-    public void indexProduct(Events.ProductChangedEvent event) {
-        try {
-            productSearchRepository.save(convertToDocument(event));
-        } catch (Exception e) {
-            System.err.println("Failed to index product: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Delete a product from Elasticsearch
-     */
-    public void deleteProduct(Long productId) {
-        try {
-            productSearchRepository.deleteById(String.valueOf(productId));
-        } catch (Exception e) {
-            System.err.println("Failed to delete product from ES: " + e.getMessage());
         }
     }
 
@@ -277,22 +254,6 @@ public class SearchService {
         doc.setStatus(product.getStatus());
         doc.setCreatedAt(product.getCreatedAt());
         doc.setCategory(product.getCategory());
-        return doc;
-    }
-
-    private ProductDocument convertToDocument(Events.ProductChangedEvent event) {
-        ProductDocument doc = new ProductDocument();
-        doc.setId(String.valueOf(event.getProductId()));
-        doc.setProductId(event.getProductId());
-        doc.setUserId(event.getUserId());
-        doc.setName(event.getName());
-        doc.setDescription(event.getDescription());
-        doc.setPrice(event.getPrice());
-        doc.setConditionLevel(event.getConditionLevel());
-        doc.setLocation(event.getLocation());
-        doc.setStatus(event.getStatus());
-        doc.setCreatedAt(event.getCreatedAt());
-        doc.setCategory(event.getCategory());
         return doc;
     }
 

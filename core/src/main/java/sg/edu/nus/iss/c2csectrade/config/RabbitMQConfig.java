@@ -178,6 +178,9 @@ public class RabbitMQConfig {
         return new TopicExchange(PRODUCT_EXCHANGE, true, false);
     }
 
+    // The Search service consumes this queue. Search declares it and its
+    // bindings too, identically, so events wait in the queue whichever
+    // service starts first.
     @Bean
     public Queue searchProductQueue() {
         return QueueBuilder.durable(SEARCH_PRODUCT_QUEUE).build();
