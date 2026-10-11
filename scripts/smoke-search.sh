@@ -4,6 +4,10 @@
 #
 # Usage: scripts/smoke-search.sh [BASE_URL]      (default http://localhost:8080)
 #
+# Products are written through Core at BASE_URL and searched through the
+# Search service at SEARCH_URL (default BASE_URL, as behind the load
+# balancer; locally the Search service listens on http://localhost:8081).
+#
 # Read-only checks (health, search endpoint) always run. The write checks
 # (create, update, delete) need a signed-in user:
 #   SMOKE_TOKEN       a JWT to use as is, or else
@@ -21,6 +25,8 @@ set -euo pipefail
 
 BASE_URL="${1:-http://localhost:8080}"
 BASE_URL="${BASE_URL%/}"
+SEARCH_URL="${SEARCH_URL:-$BASE_URL}"
+SEARCH_URL="${SEARCH_URL%/}"
 SMOKE_USER="${SMOKE_USER:-smoke_search}"
 SMOKE_PASSWORD="${SMOKE_PASSWORD:-Smoke#Search1}"
 REDIS_CONTAINER="${REDIS_CONTAINER:-c2csectrade-redis}"
@@ -35,9 +41,9 @@ TOKEN="${SMOKE_TOKEN:-}"
 pass() { echo "  PASS  $1"; PASSED=$((PASSED + 1)); }
 fail() { echo "  FAIL  $1"; FAILED=$((FAILED + 1)); }
 
-# GET /api/products/search with the given query string; prints the JSON body
+# GET /api/search with the given query string; prints the JSON body
 search() {
-    curl -sf "$BASE_URL/api/products/search?$1"
+    curl -sf "$SEARCH_URL/api/search?$1"
 }
 
 # Product ids returned by a search, sorted and space-separated
@@ -106,14 +112,16 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "Search smoke test against $BASE_URL (marker: $MARKER)"
+echo "Search smoke test: Core $BASE_URL, Search $SEARCH_URL (marker: $MARKER)"
 
 echo "Read-only checks"
-if curl -sf "$BASE_URL/actuator/health" | jq -e '.status == "UP"' > /dev/null; then
-    pass "health is UP"
-else
-    fail "health is not UP"
-fi
+for url in $(printf '%s\n' "$BASE_URL" "$SEARCH_URL" | sort -u); do
+    if curl -sf "$url/actuator/health" | jq -e '.status == "UP"' > /dev/null; then
+        pass "health is UP at $url"
+    else
+        fail "health is not UP at $url"
+    fi
+done
 if search "keyword=$MARKER" | jq -e 'type == "array" and length == 0' > /dev/null; then
     pass "search answers with an empty list for an unknown word"
 else
