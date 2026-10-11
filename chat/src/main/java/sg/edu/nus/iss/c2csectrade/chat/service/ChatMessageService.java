@@ -1,10 +1,10 @@
-package sg.edu.nus.iss.c2csectrade.service;
+package sg.edu.nus.iss.c2csectrade.chat.service;
 
-import sg.edu.nus.iss.c2csectrade.dto.ConversationDTO;
-import sg.edu.nus.iss.c2csectrade.entity.ChatMessage;
-import sg.edu.nus.iss.c2csectrade.entity.User;
-import sg.edu.nus.iss.c2csectrade.mapper.UserMapper;
-import sg.edu.nus.iss.c2csectrade.repository.ChatMessageRepository;
+import sg.edu.nus.iss.c2csectrade.chat.dto.ConversationDTO;
+import sg.edu.nus.iss.c2csectrade.chat.entity.ChatMessage;
+import sg.edu.nus.iss.c2csectrade.chat.entity.User;
+import sg.edu.nus.iss.c2csectrade.chat.mapper.UserMapper;
+import sg.edu.nus.iss.c2csectrade.chat.repository.ChatMessageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

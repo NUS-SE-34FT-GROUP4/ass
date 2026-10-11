@@ -1,13 +1,9 @@
 package sg.edu.nus.iss.c2csectrade.controller;
 
-import sg.edu.nus.iss.c2csectrade.dto.ChatMessageDTO;
-import sg.edu.nus.iss.c2csectrade.entity.ChatMessage;
 import sg.edu.nus.iss.c2csectrade.entity.Product;
 import sg.edu.nus.iss.c2csectrade.entity.Report;
 import sg.edu.nus.iss.c2csectrade.entity.User;
-import sg.edu.nus.iss.c2csectrade.event.ChatMessageFanoutPublisher;
 import sg.edu.nus.iss.c2csectrade.mapper.UserMapper;
-import sg.edu.nus.iss.c2csectrade.service.ChatMessageService;
 import sg.edu.nus.iss.c2csectrade.service.ProductService;
 import sg.edu.nus.iss.c2csectrade.service.ReportService;
 import sg.edu.nus.iss.c2csectrade.service.UserAdministrationService;
@@ -32,12 +28,6 @@ public class AdminController {
 
     @Autowired
     private ProductService productService;
-
-    @Autowired
-    private ChatMessageService chatMessageService;
-
-    @Autowired
-    private ChatMessageFanoutPublisher chatMessageFanoutPublisher;
 
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
@@ -135,108 +125,8 @@ public class AdminController {
             productService.delistProduct(productId);
             System.out.println("[DELIST] Product delisted: " + product.getName());
 
-            // Notify the product owner
-            try {
-                System.out.println("[DELIST] ========== Notifying product owner ==========");
-                System.out.println("[DELIST] Looking up product owner, user ID: " + product.getUserId());
-                User owner = userMapper.selectById(product.getUserId());
-
-                if (owner == null) {
-                    System.err.println("[DELIST] ❌ Error: no user with ID " + product.getUserId());
-                } else if (owner.getUsername() == null || owner.getUsername().isEmpty()) {
-                    System.err.println("[DELIST] ❌ Error: user exists but username is empty, user ID: " + owner.getId());
-                } else {
-                    System.out.println("[DELIST] ✅ Found owner: " + owner.getUsername() + " (ID: " + owner.getId() + ")");
-                    String ownerMessage = "Your product '" + product.getName() + "' has been delisted by an administrator for violating platform rules. Please contact support if you have questions.";
-
-                    // Save the message to the database
-                    ChatMessage savedOwnerMessage = chatMessageService.saveMessage("System", owner.getUsername(), ownerMessage, true);
-                    System.out.println("[DELIST] ✅ Owner message saved, message ID: " + savedOwnerMessage.getId());
-
-                    // Build the WebSocket message
-                    ChatMessageDTO ownerResponseDTO = ChatMessageDTO.builder()
-                        .sender("System")
-                        .recipient(owner.getUsername())
-                        .content(savedOwnerMessage.getContent())
-                        .timestamp(savedOwnerMessage.getTimestamp())
-                        .isSystemMessage(true)
-                        .build();
-
-                    System.out.println("[DELIST] 📤 Sending WebSocket message to owner: " + owner.getUsername());
-                    System.out.println("[DELIST] Message: " + ownerMessage);
-
-                    try {
-                        chatMessageFanoutPublisher.deliverToUser(
-                            owner.getUsername(),
-                            ownerResponseDTO
-                        );
-                        System.out.println("[DELIST] ✅✅ WebSocket message sent to product owner: " + owner.getUsername());
-                    } catch (Exception wsError) {
-                        System.err.println("[DELIST] ⚠️ WebSocket send failed (message is saved in the database): " + wsError.getMessage());
-                        wsError.printStackTrace();
-                    }
-                }
-                System.out.println("[DELIST] ========== Product owner notified ==========");
-            } catch (Exception e) {
-                System.err.println("[DELIST] ❌ Failed to notify product owner: " + e.getMessage());
-                e.printStackTrace();
-            }
-
-            // Notify the reporter
-            try {
-                System.out.println("[DELIST] ========== Notifying reporter ==========");
-                System.out.println("[DELIST] Looking up report, report ID: " + reportId);
-                Report report = reportService.getReportById(reportId);
-
-                if (report == null) {
-                    System.err.println("[DELIST] ❌ Error: no report with ID " + reportId);
-                } else if (report.getReporterId() == null) {
-                    System.err.println("[DELIST] ❌ Error: report exists but reporter ID is empty");
-                } else {
-                    System.out.println("[DELIST] ✅ Found report, reporter ID: " + report.getReporterId());
-                    User reporter = userMapper.selectById(report.getReporterId());
-
-                    if (reporter == null) {
-                        System.err.println("[DELIST] ❌ Error: no reporter with user ID " + report.getReporterId());
-                    } else if (reporter.getUsername() == null || reporter.getUsername().isEmpty()) {
-                        System.err.println("[DELIST] ❌ Error: reporter exists but username is empty, user ID: " + reporter.getId());
-                    } else {
-                        System.out.println("[DELIST] ✅ Found reporter: " + reporter.getUsername() + " (ID: " + reporter.getId() + ")");
-                        String reporterMessage = "The product you reported, '" + product.getName() + "', has been reviewed and delisted by an administrator. Thank you for helping keep the platform safe!";
-
-                        // Save the message to the database
-                        ChatMessage savedReporterMessage = chatMessageService.saveMessage("System", reporter.getUsername(), reporterMessage, true);
-                        System.out.println("[DELIST] ✅ Reporter message saved, message ID: " + savedReporterMessage.getId());
-
-                        // Build the WebSocket message
-                        ChatMessageDTO reporterResponseDTO = ChatMessageDTO.builder()
-                            .sender("System")
-                            .recipient(reporter.getUsername())
-                            .content(savedReporterMessage.getContent())
-                            .timestamp(savedReporterMessage.getTimestamp())
-                            .isSystemMessage(true)
-                            .build();
-
-                        System.out.println("[DELIST] 📤 Sending WebSocket message to reporter: " + reporter.getUsername());
-                        System.out.println("[DELIST] Message: " + reporterMessage);
-
-                        try {
-                            chatMessageFanoutPublisher.deliverToUser(
-                                reporter.getUsername(),
-                                reporterResponseDTO
-                            );
-                            System.out.println("[DELIST] ✅✅ WebSocket message sent to reporter: " + reporter.getUsername());
-                        } catch (Exception wsError) {
-                            System.err.println("[DELIST] ⚠️ WebSocket send failed (message is saved in the database): " + wsError.getMessage());
-                            wsError.printStackTrace();
-                        }
-                    }
-                }
-                System.out.println("[DELIST] ========== Reporter notified ==========");
-            } catch (Exception e) {
-                System.err.println("[DELIST] ❌ Failed to notify reporter: " + e.getMessage());
-                e.printStackTrace();
-            }
+            // Note: Chat notifications for delisting are now handled by the Chat module
+            // Admin operations should call the Chat module's REST API to send notifications
 
             // Mark the report as handled
             try {

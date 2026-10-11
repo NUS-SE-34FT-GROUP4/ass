@@ -1,7 +1,8 @@
-package sg.edu.nus.iss.c2csectrade.event;
+package sg.edu.nus.iss.c2csectrade.chat.event;
 
-import sg.edu.nus.iss.c2csectrade.config.RabbitMQConfig;
-import sg.edu.nus.iss.c2csectrade.dto.ChatMessageDTO;
+import sg.edu.nus.iss.c2csectrade.chat.config.RabbitMQConfig;
+import sg.edu.nus.iss.c2csectrade.chat.dto.ChatMessageDTO;
+import sg.edu.nus.iss.c2csectrade.event.Events;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

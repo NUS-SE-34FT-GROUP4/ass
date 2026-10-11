@@ -1,7 +1,7 @@
-package sg.edu.nus.iss.c2csectrade.repository;
+package sg.edu.nus.iss.c2csectrade.chat.repository;
 
-import sg.edu.nus.iss.c2csectrade.entity.ChatMessage;
-import sg.edu.nus.iss.c2csectrade.mapper.ChatMessageMapper;
+import sg.edu.nus.iss.c2csectrade.chat.entity.ChatMessage;
+import sg.edu.nus.iss.c2csectrade.chat.mapper.ChatMessageMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 

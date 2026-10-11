@@ -1,6 +1,6 @@
-package sg.edu.nus.iss.c2csectrade.mapper;
+package sg.edu.nus.iss.c2csectrade.chat.mapper;
 
-import sg.edu.nus.iss.c2csectrade.entity.ChatMessage;
+import sg.edu.nus.iss.c2csectrade.chat.entity.ChatMessage;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
