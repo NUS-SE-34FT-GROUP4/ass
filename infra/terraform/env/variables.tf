@@ -179,8 +179,18 @@ variable "github_repository" {
   default     = "NUS-SE-34FT-GROUP4/ass"
 }
 
-variable "db_use_master_user" {
-  description = "Services log in as the RDS master user. Set false once the per-service users from the WP8 grant script exist"
-  type        = bool
-  default     = true
+variable "db_service_users" {
+  description = <<-EOT
+    Services that log in to MySQL as their own user (core_svc, search_svc,
+    chat_svc) instead of the RDS master user. Add a service only after
+    infra/db/grants.sql has run in this workspace, and Search or Chat only
+    once their code has moved out of Core.
+  EOT
+  type        = set(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for s in var.db_service_users : contains(["core", "search", "chat"], s)])
+    error_message = "db_service_users may only contain core, search and chat."
+  }
 }
