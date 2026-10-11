@@ -1,0 +1,89 @@
+# Dedicated local WP10 environment. No shared deployment is contacted.
+name: ass-wp10-local
+services:
+  mysql:
+    image: mysql:8.0.36
+    environment:
+      MYSQL_ROOT_PASSWORD: local-wp10-root
+      MYSQL_DATABASE: trade
+      MYSQL_USER: tradeuser
+      MYSQL_PASSWORD: tradepass
+    volumes:
+      - mysql:/var/lib/mysql
+      - ../../init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD=$$MYSQL_ROOT_PASSWORD mysql -uroot -e "SELECT 1"']
+      interval: 5s
+      timeout: 5s
+      retries: 60
+  redis:
+    image: redis:7.2
+    volumes: [redis:/data]
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+    volumes: [rabbitmq:/var/lib/rabbitmq]
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.18.8
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: 'false'
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    volumes: [elasticsearch:/usr/share/elasticsearch/data]
+    healthcheck:
+      test: [CMD-SHELL, 'curl -fsS http://localhost:9200/_cluster/health']
+      interval: 10s
+      timeout: 10s
+      retries: 30
+  minio:
+    image: ass-wp10-minio:2025-04-22
+    build:
+      context: .
+      dockerfile: Dockerfile.minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address :9001
+    volumes: [minio:/data]
+  backend:
+    image: ass-wp10-backend:local
+    build:
+      context: ../..
+      dockerfile: tests/load/Dockerfile.backend
+    env_file: local.env
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_AMQP: INFO
+    ports: ['127.0.0.1:18080:8080']
+    depends_on:
+      mysql: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+      elasticsearch: {condition: service_healthy}
+      redis: {condition: service_started}
+      minio: {condition: service_started}
+  node:
+    image: node:22-alpine
+    profiles: [tools]
+    working_dir: /app
+    volumes: ['../..:/app']
+    env_file: local.env
+    entrypoint: [node]
+  k6:
+    image: grafana/k6:2.3.0
+    profiles: [tools]
+    user: '0:0'
+    working_dir: /app
+    volumes: ['../..:/app']
+volumes:
+  mysql:
+  redis:
+  rabbitmq:
+  elasticsearch:
+  minio:

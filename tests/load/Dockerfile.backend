@@ -1,0 +1,6 @@
+# Copy the already-tested artifact into an immutable runtime image. Never
+# bind-mount target/: Maven repackaging can corrupt a running JVM's jar reads.
+FROM maven:3.9-amazoncorretto-17
+WORKDIR /app
+COPY core/target/c2c-core-0.0.1-SNAPSHOT.jar /app/app.jar
+ENTRYPOINT ["java", "-Xms512m", "-Xmx1536m", "-jar", "/app/app.jar"]

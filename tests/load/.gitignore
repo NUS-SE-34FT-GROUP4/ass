@@ -2,3 +2,6 @@ fixtures.json
 summary*.json
 results*.json
 generated/
+node_modules/
+local.env
+results/

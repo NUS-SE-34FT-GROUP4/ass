@@ -30,6 +30,7 @@
     <properties>
         <!-- Default to Java 17 for maximum compatibility (Lombok + toolchain) -->
         <java.version>17</java.version>
+        <jacoco.version>0.8.14</jacoco.version>
         <jjwt.version>0.11.5</jjwt.version>
         <!-- Patch releases ahead of what Boot 3.5.16 manages, each fixing a
              CRITICAL CVE that the Trivy gate in CI fails on. Drop an override
@@ -94,6 +95,22 @@
             </plugins>
         </pluginManagement>
         <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <execution>
+                        <id>coverage-agent</id>
+                        <goals><goal>prepare-agent</goal></goals>
+                    </execution>
+                    <execution>
+                        <id>coverage-report</id>
+                        <phase>verify</phase>
+                        <goals><goal>report</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

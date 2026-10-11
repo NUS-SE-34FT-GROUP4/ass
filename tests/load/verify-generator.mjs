@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import bcrypt from 'bcryptjs';
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'load-fixtures-'));
+const script = new URL('./generate-fixtures.mjs', import.meta.url);
+const env = { ...process.env, LOAD_USERS: '4', LOAD_PRODUCTS: '8', JWT_SECRET: crypto.randomBytes(64).toString('base64') };
+for (const k of ['LOAD_PASSWORD_HASH','LOAD_PAYMENT_HASH','LOAD_PASSWORD','LOAD_PAYMENT_PASSWORD']) delete env[k];
+const run = extra => spawnSync(process.execPath, [script.pathname, dir], { env: { ...env, ...extra }, encoding: 'utf8' });
+try {
+  let result = run({});
+  assert.equal(result.status, 0, result.stderr);
+  const sql = fs.readFileSync(path.join(dir, 'seed.sql'), 'utf8');
+  const credentials = JSON.parse(fs.readFileSync(path.join(dir, 'credentials.json')));
+  const fixtures = JSON.parse(fs.readFileSync(path.join(dir, 'fixtures.json')));
+  const hashes = sql.match(/\$2[aby]\$\d\d\$[./A-Za-z0-9]{53}/g);
+  assert.ok(bcrypt.compareSync(credentials.password, hashes[0]));
+  assert.ok(bcrypt.compareSync(credentials.paymentPassword, hashes[1]));
+  assert.equal((sql.match(/INSERT INTO users /g) || []).length, 4);
+  assert.equal((sql.match(/INSERT INTO pms_product /g) || []).length, 8);
+  assert.equal(fixtures.users.length, 3);
+  assert.ok(!fixtures.users.some(u => u.username === 'load_buyer_0000'));
+  const [header,payload,signature] = fixtures.users[0].token.split('.');
+  assert.equal(signature, crypto.createHmac('sha512', Buffer.from(env.JWT_SECRET,'base64')).update(header+'.'+payload).digest('base64url'));
+  assert.notEqual(run({ LOAD_PASSWORD: 'correct-password', LOAD_PASSWORD_HASH: bcrypt.hashSync('wrong-password', 4) }).status, 0);
+  assert.notEqual(run({ LOAD_PAYMENT_PASSWORD: 'abc123' }).status, 0);
+  assert.notEqual(run({ LOAD_USERS: '1' }).status, 0);
+  assert.notEqual(run({ LOAD_PRODUCTS: "2'); DROP TABLE users;" }).status, 0);
+  assert.notEqual(run({ JWT_SECRET: 'short' }).status, 0);
+  console.log('Generator checks passed: cardinality, password matching, JWT, seller separation and invalid inputs.');
+} finally { fs.rmSync(dir, { recursive: true, force: true }); }
