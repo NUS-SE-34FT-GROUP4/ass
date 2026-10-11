@@ -56,7 +56,8 @@ public class SecurityConfig {
                .requestMatchers("/api/chat/history/**").authenticated()
                .requestMatchers("/api/chat/read/**").authenticated()
                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-               .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+               // The load balancer probes /actuator/health/liveness without a token
+               .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                .anyRequest().authenticated()
             )
            .exceptionHandling(ex -> ex

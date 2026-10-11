@@ -59,9 +59,21 @@ terraform apply
 2. `terraform apply` in the `staging` workspace.
 3. Load the schema and seed data:
    `infra/scripts/run-sql.sh staging init.sql`
-4. When the WP8 grant script is ready, run it the same way, then set
-   `db_use_master_user = false` and apply. Its users must be named `core_svc`
-   and `chat_svc` with the passwords in `<env>/db/core` and `<env>/db/chat`.
+4. Create the per-service database users (10/11 meeting: `core_svc`,
+   `search_svc`, `chat_svc`, no DDL) with the WP8 grant script:
+   `infra/scripts/run-sql.sh staging infra/db/grants.sql`
+   The script never contains a password. It writes each one as a placeholder,
+   which the db-admin task fills in from `<env>/db/<service>` in Secrets
+   Manager before running the SQL:
+   ```sql
+   CREATE USER IF NOT EXISTS 'core_svc'@'%' IDENTIFIED BY '@@core_svc_password@@';
+   ALTER USER 'core_svc'@'%' IDENTIFIED BY '@@core_svc_password@@';
+   ```
+   (`ALTER USER` keeps a re-run in step with the secret.) Then list the
+   services that should log in as their own user and apply, for example
+   `db_service_users = ["core"]` in the tfvars. Search and Chat join the list
+   only after their code has moved out of Core; until then they, like every
+   service not listed, log in as the master user.
 5. Upload the frontend build to the `frontend_bucket` output and open `app_url`.
 
 ## Day to day
@@ -94,6 +106,12 @@ Production refuses `rabbitmq_mode=container`.
 
 ## Notes for the service owners
 
+- **Health check**: the ALB checks `/actuator/health/liveness`, which turns DOWN
+  only when the application itself is broken. `/actuator/health` still shows
+  MySQL, Redis and RabbitMQ for people, but the ALB no longer replaces tasks
+  when one of them is down. Every service sets
+  `management.endpoint.health.probes.enabled=true`; a new service must too.
+  When changing the path, deploy an image that serves it before applying.
 - **Redis** requires TLS: the task sets `SPRING_DATA_REDIS_SSL_ENABLED=true`.
 - **OpenSearch** is reached at `SPRING_ELASTICSEARCH_URIS` (HTTPS, no request
   signing; the security group is the gate). The Elasticsearch 8 Java client

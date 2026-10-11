@@ -11,6 +11,10 @@
     <name>c2c-search</name>
     <description>Search service: keyword search, filtering and highlighting on the product index</description>
 
+    <properties>
+        <opensearch-java.version>3.10.0</opensearch-java.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>sg.edu.nus.iss</groupId>
@@ -23,6 +27,17 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!-- Product events from Core keep the index up to date -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+        <!-- Amazon OpenSearch Service on AWS, the OpenSearch container locally -->
+        <dependency>
+            <groupId>org.opensearch.client</groupId>
+            <artifactId>opensearch-java</artifactId>
+            <version>${opensearch-java.version}</version>
         </dependency>
     </dependencies>
 

@@ -60,19 +60,19 @@ services:
     networks:
       - c2csectrade-network
 
-  # Elasticsearch
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.18.8
-    container_name: c2csectrade-elasticsearch
+  # OpenSearch: the same engine and version as Amazon OpenSearch Service on AWS
+  opensearch:
+    image: opensearchproject/opensearch:2.17.1
+    container_name: c2csectrade-opensearch
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - DISABLE_SECURITY_PLUGIN=true
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
     ports:
       - "9200:9200"
-      - "9300:9300"
     volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
+      - opensearch-data:/usr/share/opensearch/data
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
@@ -115,7 +115,11 @@ services:
       SPRING_DATASOURCE_PASSWORD: tradepass
       SPRING_DATA_REDIS_HOST: redis
       SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
+      SPRING_ELASTICSEARCH_URIS: http://opensearch:9200
+      # Core still reads the index with the Elasticsearch client until the
+      # Search service serves every search; same settings as on AWS
+      APP_SEARCH_OPENSEARCHCOMPATIBILITY: "true"
+      MANAGEMENT_HEALTH_ELASTICSEARCH_ENABLED: "false"
       MINIO_ENDPOINT: http://minio:9000
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (see .env.example)}
     ports:
@@ -127,7 +131,7 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-      elasticsearch:
+      opensearch:
         condition: service_healthy
       minio:
         condition: service_healthy
@@ -137,6 +141,28 @@ services:
     # Scale to several instances with --scale
     # deploy:
     #   replicas: 3
+
+  # Search Service: consumes product events into the index and serves /api/search
+  search:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE: search
+    container_name: c2csectrade-search
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ELASTICSEARCH_URIS: http://opensearch:9200
+    ports:
+      - "8081:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    networks:
+      - c2csectrade-network
+    restart: unless-stopped
 
   # Frontend Application
   frontend:
@@ -158,7 +184,7 @@ volumes:
     driver: local
   rabbitmq-data:
     driver: local
-  elasticsearch-data:
+  opensearch-data:
     driver: local
 
 networks:
