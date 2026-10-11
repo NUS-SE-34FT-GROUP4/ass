@@ -1,0 +1,8 @@
+{
+  "productIds": [1, 2],
+  "keywords": ["book", "phone"],
+  "users": [
+    {"username": "load_buyer_0001", "token": "REPLACE_WITH_JWT", "paymentPassword": "123456"},
+    {"username": "load_buyer_0002", "token": "REPLACE_WITH_JWT", "paymentPassword": "123456"}
+  ]
+}
