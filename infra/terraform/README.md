@@ -94,6 +94,12 @@ Production refuses `rabbitmq_mode=container`.
 
 ## Notes for the service owners
 
+- **Health check**: the ALB checks `/actuator/health/liveness`, which turns DOWN
+  only when the application itself is broken. `/actuator/health` still shows
+  MySQL, Redis and RabbitMQ for people, but the ALB no longer replaces tasks
+  when one of them is down. Every service sets
+  `management.endpoint.health.probes.enabled=true`; a new service must too.
+  When changing the path, deploy an image that serves it before applying.
 - **Redis** requires TLS: the task sets `SPRING_DATA_REDIS_SSL_ENABLED=true`.
 - **OpenSearch** is reached at `SPRING_ELASTICSEARCH_URIS` (HTTPS, no request
   signing; the security group is the gate). The Elasticsearch 8 Java client
