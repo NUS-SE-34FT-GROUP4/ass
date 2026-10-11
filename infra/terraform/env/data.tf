@@ -21,6 +21,13 @@ resource "aws_db_parameter_group" "mysql" {
     name  = "collation_server"
     value = "utf8mb4_unicode_ci"
   }
+  # The JDBC URL uses serverTimezone=Asia/Singapore, so DATETIME columns hold
+  # Singapore time. NOW() must agree, or `expire_time < NOW()` in the order
+  # expiry job only matches 8 hours late (RDS defaults to UTC).
+  parameter {
+    name  = "time_zone"
+    value = "Asia/Singapore"
+  }
 }
 
 resource "aws_db_instance" "mysql" {
