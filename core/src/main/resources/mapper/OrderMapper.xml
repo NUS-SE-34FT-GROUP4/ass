@@ -18,19 +18,17 @@
         SELECT * FROM orders WHERE user_id = #{userId} ORDER BY created_at DESC
     </select>
 
-    <select id="findExpiredOrders" resultType="sg.edu.nus.iss.c2csectrade.entity.Order">
-        SELECT * FROM orders
+    <!-- An order leaves PENDING exactly once: pay, cancel and expiry race on this condition -->
+    <update id="updateStatusIfPending">
+        UPDATE orders SET status = #{status}, payment_method = #{paymentMethod}, updated_at = #{updatedAt}
+        WHERE id = #{id} AND status = 'PENDING'
+    </update>
+
+    <update id="expirePendingOrders">
+        UPDATE orders
+        SET status = 'EXPIRED', updated_at = NOW()
         WHERE status = 'PENDING'
         AND expire_time IS NOT NULL
         AND expire_time &lt; NOW()
-    </select>
-
-    <update id="batchUpdateStatusToExpired">
-        UPDATE orders
-        SET status = 'EXPIRED', updated_at = NOW()
-        WHERE id IN
-        <foreach collection="orderIds" item="orderId" open="(" separator="," close=")">
-            #{orderId}
-        </foreach>
     </update>
 </mapper>

@@ -302,7 +302,11 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus("PAID");
         order.setPaymentMethod(paymentRequest.getPaymentMethod());
         order.setUpdatedAt(new Date());
-        orderMapper.updateStatus(order);
+        // The order may have expired or been cancelled since it was read;
+        // throwing rolls back the stock and balance deducted above
+        if (orderMapper.updateStatusIfPending(order) == 0) {
+            throw new RuntimeException("Order is no longer pending; it may have expired");
+        }
 
         Transaction transaction = new Transaction();
         transaction.setOrderId(orderId);
@@ -381,42 +385,15 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("Order not found or not pending");
         }
 
-        // Load the order items
-        List<OrderItem> orderItems = orderItemMapper.findByOrderId(orderId);
-
-        // Note: stock was not deducted when the order was created, so cancelling does not restore it
-        // Only the cart is restored
-        for (OrderItem item : orderItems) {
-
-            // If the product came from the cart, put it back
-            if (Boolean.TRUE.equals(item.getFromCart())) {
-                CartItem existingCartItem = cartItemMapper.selectByUserIdAndProductId(
-                    order.getUserId().longValue(),
-                    item.getProductId().longValue()
-                );
-
-                if (existingCartItem != null) {
-                    // Already in the cart: update the quantity
-                    existingCartItem.setQuantity(existingCartItem.getQuantity() + item.getQuantity());
-                    existingCartItem.setUpdatedAt(java.time.Instant.now());
-                    cartItemMapper.update(existingCartItem);
-                } else {
-                    // Not in the cart: add it
-                    CartItem cartItem = new CartItem();
-                    cartItem.setUserId(order.getUserId().longValue());
-                    cartItem.setProductId(item.getProductId().longValue());
-                    cartItem.setQuantity(item.getQuantity());
-                    cartItem.setCreatedAt(java.time.Instant.now());
-                    cartItem.setUpdatedAt(java.time.Instant.now());
-                    cartItemMapper.insert(cartItem);
-                }
-            }
-        }
+        // Nothing to undo: stock is deducted only on payment, and the cart is
+        // kept until payment, so the items are still in it
 
         // Update the order status
         order.setStatus("CANCELED");
         order.setUpdatedAt(new Date());
-        orderMapper.updateStatus(order);
+        if (orderMapper.updateStatusIfPending(order) == 0) {
+            throw new RuntimeException("Order not found or not pending");
+        }
 
         return order;
     }
