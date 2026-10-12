@@ -163,6 +163,16 @@ else
             fail "keyword is highlighted (got: $hit)"
         fi
 
+        # The home page searches through Core, which asks Search and loads
+        # the products from the database
+        home="$(curl -sf "$BASE_URL/api/products?keyword=$MARKER" \
+            | jq -r --argjson a "$A" '.[] | select(.id == $a) | .highlightedName' || true)"
+        if [ "$home" = "<em class='highlight'>$MARKER</em> textbook" ]; then
+            pass "home page search goes through Search"
+        else
+            fail "home page search goes through Search (got: $home)"
+        fi
+
         if [ "$(search_ids "keyword=$MARKER&minPrice=20&maxPrice=30")" = "$A" ]; then
             pass "price range filter"
         else

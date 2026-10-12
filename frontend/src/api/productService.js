@@ -36,7 +36,8 @@ export default {
   getAllProducts(params) {
     return apiClient.get('/products', { params });
   },
+  // Search service (keyword, minPrice, maxPrice, conditionLevel, location, category, page, size)
   searchProducts(params) {
-    return apiClient.get('/products/search', { params });
+    return apiClient.get('/search', { params });
   },
 };

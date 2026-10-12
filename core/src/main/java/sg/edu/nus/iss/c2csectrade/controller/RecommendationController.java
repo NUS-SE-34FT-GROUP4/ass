@@ -8,7 +8,6 @@ import sg.edu.nus.iss.c2csectrade.service.HistoryService;
 import sg.edu.nus.iss.c2csectrade.service.ProductService;
 import sg.edu.nus.iss.c2csectrade.service.RecommendationEngineService;
 import sg.edu.nus.iss.c2csectrade.service.HybridRecommendationService;
-import sg.edu.nus.iss.c2csectrade.service.SearchService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -40,9 +39,6 @@ public class RecommendationController {
 
     @Autowired
     private ProductService productService;
-
-    @Autowired(required = false)
-    private SearchService searchService;
 
     /**
      * Get personalized recommendations for current user ("You may also like")
@@ -153,31 +149,8 @@ public class RecommendationController {
         // Search for products matching each interest tag
         for (String tag : interests.keySet()) {
             try {
-                List<Product> products;
-
-                // Try Elasticsearch first if available
-                if (searchService != null) {
-                    try {
-                        // Use the new category search method
-                        var productDocuments = searchService.searchProductsByCategory(tag, limit);
-                        products = productDocuments.stream()
-                            .map(doc -> {
-                                try {
-                                    return productMapper.selectById(doc.getProductId());
-                                } catch (Exception e) {
-                                    return null;
-                                }
-                            })
-                            .filter(p -> p != null)
-                            .collect(Collectors.toList());
-                    } catch (Exception e) {
-                        System.err.println("Elasticsearch search failed, falling back to database: " + e.getMessage());
-                        products = productMapper.selectByCategory(tag);
-                    }
-                } else {
-                    // Fallback to database search
-                    products = productMapper.selectByCategory(tag);
-                }
+                // An exact category match, which the database answers directly
+                List<Product> products = productMapper.selectByCategory(tag);
 
                 for (Product product : products) {
                     if (product.getStatus() == 1 &&

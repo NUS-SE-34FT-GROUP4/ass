@@ -12,15 +12,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import sg.edu.nus.iss.c2csectrade.service.SearchService;
-import sg.edu.nus.iss.c2csectrade.dto.SearchRequestDTO;
-import sg.edu.nus.iss.c2csectrade.document.ProductDocument;
+import sg.edu.nus.iss.c2csectrade.service.SearchClient;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
-import java.util.Map;
 import java.util.ArrayList;
-import java.util.stream.Collectors;
-import java.util.function.Function;
 
 @RestController
 @RequestMapping("/api/products")
@@ -28,7 +23,7 @@ public class ProductController {
     @Autowired
     private ProductService productService;
     @Autowired
-    private SearchService searchService;
+    private SearchClient searchClient;
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -93,55 +88,17 @@ public class ProductController {
         try {
             List<ProductDTO> productDTOs;
 
-            // Use Elasticsearch only when there is a keyword (for highlighting)
+            // A keyword goes to the Search service (relevance, typo tolerance,
+            // highlighting); without one, or when Search is down, the database answers
             if (keyword != null && !keyword.trim().isEmpty()) {
-
-                SearchRequestDTO searchRequest = new SearchRequestDTO();
-                searchRequest.setKeyword(keyword);
-                searchRequest.setMinPrice(minPrice);
-                searchRequest.setMaxPrice(maxPrice);
-                searchRequest.setConditionLevel(conditionLevel);
-                searchRequest.setLocation(location);
-                searchRequest.setCategory(categories); // TODO: Add category support to
-                // SearchService
-                searchRequest.setPage(0);
-                searchRequest.setSize(100);
-
-                List<ProductDocument> searchResults = searchService.searchProducts(searchRequest);
-
-                if (searchResults.isEmpty()) {
-                    return ResponseEntity.ok(new ArrayList<>());
+                try {
+                    productDTOs = searchByKeyword(keyword, minPrice, maxPrice, conditionLevel, location, categories);
+                } catch (SearchClient.SearchUnavailableException e) {
+                    System.err.println(e.getMessage() + "; searching the database instead");
+                    productDTOs = productService.convertToDTOList(productService.listProductsWithFilters(
+                            keyword, minPrice, maxPrice, conditionLevel, location, categories));
                 }
-
-                // Extract IDs
-                List<Long> productIds = searchResults.stream()
-                        .map(ProductDocument::getProductId)
-                        .collect(Collectors.toList());
-
-                List<Product> products = new ArrayList<>();
-                for (Long id : productIds) {
-                    Product p = productService.getProductById(id);
-                    if (p != null) {
-                        products.add(p);
-                    }
-                }
-
-                productDTOs = productService.convertToDTOList(products);
-
-                // Overlay highlighting
-                Map<Long, ProductDocument> docMap = searchResults.stream()
-                        .collect(Collectors.toMap(ProductDocument::getProductId, Function.identity()));
-
-                for (ProductDTO dto : productDTOs) {
-                    ProductDocument doc = docMap.get(dto.getId());
-                    if (doc != null) {
-                        dto.setHighlightedName(doc.getHighlightedName());
-                        dto.setHighlightedDescription(doc.getHighlightedDescription());
-                    }
-                }
-
             } else {
-                // Without a keyword, query the database (supports every filter)
                 List<Product> products = productService.listProductsWithFilters(keyword, minPrice, maxPrice,
                         conditionLevel, location, categories);
                 productDTOs = productService.convertToDTOList(products);
@@ -154,6 +111,28 @@ public class ProductController {
             e.printStackTrace();
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * Product ids and highlights come from the Search service, everything else
+     * from the database. A product deleted since it was indexed is skipped.
+     */
+    private List<ProductDTO> searchByKeyword(String keyword, java.math.BigDecimal minPrice,
+            java.math.BigDecimal maxPrice, Integer conditionLevel, String location, String categories) {
+        List<SearchClient.Hit> hits = searchClient.search(keyword, minPrice, maxPrice, conditionLevel,
+                location, categories, 100);
+
+        List<ProductDTO> productDTOs = new ArrayList<>();
+        for (SearchClient.Hit hit : hits) {
+            Product product = productService.getProductById(hit.productId());
+            if (product != null) {
+                ProductDTO dto = productService.convertToDTO(product);
+                dto.setHighlightedName(hit.highlightedName());
+                dto.setHighlightedDescription(hit.highlightedDescription());
+                productDTOs.add(dto);
+            }
+        }
+        return productDTOs;
     }
 
     @GetMapping("/{id}")

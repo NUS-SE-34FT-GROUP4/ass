@@ -39,6 +39,16 @@
             <artifactId>opensearch-java</artifactId>
             <version>${opensearch-java.version}</version>
         </dependency>
+        <!-- Reads pms_product (search_svc, read only) to rebuild the whole index -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
     <build>
