@@ -26,6 +26,20 @@ resource "aws_service_discovery_private_dns_namespace" "internal" {
   vpc  = aws_vpc.main.id
 }
 
+# search.<namespace>: Core calls Search directly for the home page keyword
+# search and the administrator's index rebuild (/internal/reindex, which the
+# ALB does not route). One A record per running task.
+resource "aws_service_discovery_service" "search" {
+  name = "search"
+  dns_config {
+    namespace_id = aws_service_discovery_private_dns_namespace.internal.id
+    dns_records {
+      type = "A"
+      ttl  = 10
+    }
+  }
+}
+
 data "aws_ecr_repository" "service" {
   for_each = var.services
   name     = "c2csectrade/${each.key}"
@@ -171,6 +185,9 @@ locals {
     SPRING_RABBITMQ_PORT          = tostring(local.mq_port)
     SPRING_RABBITMQ_SSL_ENABLED   = tostring(local.mq_ssl)
     SPRING_ELASTICSEARCH_URIS     = "https://${aws_opensearch_domain.search.endpoint}:443"
+    # Core -> Search inside the VPC (Cloud Map); Core falls back to the
+    # database when Search cannot be reached
+    APP_SEARCH_URL = "http://search.${aws_service_discovery_private_dns_namespace.internal.name}:${var.container_port}"
     # See OpenSearchCompatibilityConfig: the ES 8 client needs this to talk to OpenSearch.
     APP_SEARCH_OPENSEARCHCOMPATIBILITY = "true"
     # The 8.18 client cannot decode OpenSearch's cluster health response, so
@@ -267,6 +284,13 @@ resource "aws_ecs_service" "service" {
     target_group_arn = aws_lb_target_group.service[each.key].arn
     container_name   = each.key
     container_port   = var.container_port
+  }
+
+  dynamic "service_registries" {
+    for_each = each.key == "search" ? [aws_service_discovery_service.search.arn] : []
+    content {
+      registry_arn = service_registries.value
+    }
   }
 
   deployment_minimum_healthy_percent = 100
