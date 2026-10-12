@@ -12,7 +12,8 @@
 -- tables are created by init.sql as the master user.
 
 -- ---------------------------------------------------------------- core_svc
--- Owns every table except chat_message.
+-- Owns every table except chat_message, which belongs to Chat: Core has no
+-- privilege on it.
 CREATE USER IF NOT EXISTS 'core_svc'@'%' IDENTIFIED BY '@@core_svc_password@@';
 ALTER USER 'core_svc'@'%' IDENTIFIED BY '@@core_svc_password@@';
 REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'core_svc'@'%';
@@ -32,10 +33,6 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON trade.bargain_activity TO 'core_svc'@'%'
 GRANT SELECT, INSERT, UPDATE, DELETE ON trade.bargain_help     TO 'core_svc'@'%';
 GRANT SELECT, INSERT, UPDATE, DELETE ON trade.review           TO 'core_svc'@'%';
 GRANT SELECT, INSERT, UPDATE, DELETE ON trade.credit_score     TO 'core_svc'@'%';
-
--- chat_message belongs to Chat. Core only appends the admin's system messages
--- (AdminController), so it can neither change nor delete a message.
-GRANT SELECT, INSERT ON trade.chat_message TO 'core_svc'@'%';
 
 -- -------------------------------------------------------------- search_svc
 -- Reads products for the full index rebuild; day-to-day indexing comes from
