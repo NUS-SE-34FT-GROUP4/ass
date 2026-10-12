@@ -56,7 +56,6 @@ public class SecurityConfig {
                .requestMatchers("/ws/**").permitAll() // allow WebSocket handshake and SockJS endpoints
                .requestMatchers("/api/products").permitAll() // Anyone can view the product list
                .requestMatchers("/api/products/*").permitAll() // Anyone can view product details
-               .requestMatchers("/api/products/search").permitAll() // Anyone can search products
                .requestMatchers("/api/chat/history/**").authenticated()
                .requestMatchers("/api/chat/read/**").authenticated()
                .requestMatchers("/api/admin/**").hasRole("ADMIN")

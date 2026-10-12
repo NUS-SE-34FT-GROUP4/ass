@@ -54,7 +54,7 @@ public class ProductService {
             // Inside the transaction: save to the database
             Product product = saveProductWithMedia(dto, uploadedUrls, userId);
 
-            // Publish an event so Elasticsearch indexes it (async, avoids a circular dependency)
+            // Publish an event so the Search service indexes it (async, avoids a circular dependency)
             eventPublisher.publishEvent(new ProductCreatedEvent(this, product));
 
             return product;
@@ -264,7 +264,7 @@ public class ProductService {
 
     public void deleteProduct(Long id) {
         productMapper.deleteById(id);
-        // Sync to Elasticsearch
+        // Sync to the search index
         try {
             eventPublisher.publishEvent(new ProductDeletedEvent(this, id));
         } catch (Exception e) {
@@ -389,7 +389,7 @@ public class ProductService {
 
             System.out.println("Product updated");
 
-            // Sync to Elasticsearch
+            // Sync to the search index
             try {
                 eventPublisher.publishEvent(new ProductUpdatedEvent(this, product));
             } catch (Exception e) {

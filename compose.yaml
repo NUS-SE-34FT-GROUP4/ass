@@ -121,11 +121,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: tradepass
       SPRING_DATA_REDIS_HOST: redis
       SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_ELASTICSEARCH_URIS: http://opensearch:9200
-      # Core still reads the index with the Elasticsearch client until the
-      # Search service serves every search; same settings as on AWS
-      APP_SEARCH_OPENSEARCHCOMPATIBILITY: "true"
-      MANAGEMENT_HEALTH_ELASTICSEARCH_ENABLED: "false"
+      # Keyword search; without Search, Core falls back to the database
+      APP_SEARCH_URL: http://search:8080
       MINIO_ENDPOINT: http://minio:9000
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (see .env.example)}
     ports:
@@ -136,8 +133,6 @@ services:
       redis:
         condition: service_healthy
       rabbitmq:
-        condition: service_healthy
-      opensearch:
         condition: service_healthy
       minio:
         condition: service_healthy
@@ -159,9 +154,15 @@ services:
     environment:
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_ELASTICSEARCH_URIS: http://opensearch:9200
+      # Reads pms_product for the full index rebuild
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/trade?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: tradeuser
+      SPRING_DATASOURCE_PASSWORD: tradepass
     ports:
       - "8081:8080"
     depends_on:
+      mysql:
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
       opensearch:
@@ -205,6 +206,7 @@ services:
       - "80:80"
     depends_on:
       - backend
+      - search
       - chat
     networks:
       - c2csectrade-network

@@ -5,8 +5,6 @@ import org.opensearch.client.opensearch._types.mapping.TypeMapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import sg.edu.nus.iss.c2csectrade.event.Events;
 import sg.edu.nus.iss.c2csectrade.search.document.ProductDocument;
@@ -36,19 +34,6 @@ public class ProductIndexService {
         this.index = index;
     }
 
-    /**
-     * Creates the index at startup. OpenSearch may not be reachable yet, so a
-     * failure here only logs; the first write tries again.
-     */
-    @EventListener(ApplicationReadyEvent.class)
-    public void createIndexAtStartup() {
-        try {
-            ensureIndex();
-        } catch (Exception e) {
-            log.warn("Could not create index {} at startup: {}", index, e.getMessage());
-        }
-    }
-
     public void index(Events.ProductChangedEvent event) throws IOException {
         ensureIndex();
         ProductDocument doc = toDocument(event);
@@ -61,15 +46,19 @@ public class ProductIndexService {
         client.delete(d -> d.index(index).id(String.valueOf(productId)));
     }
 
-    void ensureIndex() throws IOException {
+    /** Creates the index if it does not exist; returns true if it was created now. */
+    boolean ensureIndex() throws IOException {
         if (indexReady) {
-            return;
+            return false;
         }
+        boolean created = false;
         if (!client.indices().exists(e -> e.index(index)).value()) {
             client.indices().create(c -> c.index(index).mappings(mapping()));
             log.info("Created index {}", index);
+            created = true;
         }
         indexReady = true;
+        return created;
     }
 
     static TypeMapping mapping() {
