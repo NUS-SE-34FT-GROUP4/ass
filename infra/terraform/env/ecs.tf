@@ -150,9 +150,9 @@ resource "aws_iam_role_policy" "task_exec" {
 # ---------------------------------------------------------------- task definitions
 
 locals {
-  # Search keeps Core's database user only until it is extracted and reads
-  # nothing but OpenSearch; then drop the datasource from its task definition.
-  db_secret_for = { core = "core", search = "core", chat = "chat" }
+  # Each service has its own database user (10/11 meeting: core_svc,
+  # search_svc, chat_svc). Search only rebuilds its index from pms_product.
+  db_secret_for = { core = "core", search = "search", chat = "chat" }
 
   db_url = join("", [
     "jdbc:mysql://${aws_db_instance.mysql.address}:${aws_db_instance.mysql.port}/${var.db_name}",
@@ -189,9 +189,9 @@ locals {
 
   db_user_secret = {
     for svc in keys(var.services) : svc => (
-      var.db_use_master_user
-      ? aws_db_instance.mysql.master_user_secret[0].secret_arn
-      : aws_secretsmanager_secret.db[local.db_secret_for[svc]].arn
+      contains(var.db_service_users, svc)
+      ? aws_secretsmanager_secret.db[local.db_secret_for[svc]].arn
+      : aws_db_instance.mysql.master_user_secret[0].secret_arn
     )
   }
 }
@@ -308,15 +308,25 @@ resource "aws_ecs_task_definition" "db_admin" {
     image      = "mysql:8.0"
     essential  = true
     entryPoint = ["sh", "-c"]
-    command    = ["echo \"$SQL_GZ_B64\" | base64 -d | gunzip | mysql --ssl-mode=REQUIRED -h \"$DB_HOST\" -u \"$DB_USER\" -p\"$DB_PASSWORD\" -v"]
+    # grants.sql names each password as @@<service>_svc_password@@; they are
+    # filled in here from Secrets Manager, so they never enter the repository.
+    # No -v: echoing the statements would put the passwords in CloudWatch.
+    command = [join(" | ", concat(
+      ["echo \"$SQL_GZ_B64\" | base64 -d | gunzip"],
+      [for svc in sort(tolist(local.db_services)) : format("sed \"s/@@%s_svc_password@@/$%s_SVC_PASSWORD/g\"", svc, upper(svc))],
+      ["mysql --ssl-mode=REQUIRED -h \"$DB_HOST\" -u \"$DB_USER\" -p\"$DB_PASSWORD\""],
+    ))]
     environment = [
       { name = "DB_HOST", value = aws_db_instance.mysql.address },
       { name = "SQL_GZ_B64", value = "" },
     ]
-    secrets = [
+    secrets = concat([
       { name = "DB_USER", valueFrom = "${aws_db_instance.mysql.master_user_secret[0].secret_arn}:username::" },
       { name = "DB_PASSWORD", valueFrom = "${aws_db_instance.mysql.master_user_secret[0].secret_arn}:password::" },
-    ]
+      ], [
+      for svc in sort(tolist(local.db_services)) :
+      { name = "${upper(svc)}_SVC_PASSWORD", valueFrom = "${aws_secretsmanager_secret.db[svc].arn}:password::" }
+    ])
     logConfiguration = {
       logDriver = "awslogs"
       options = {

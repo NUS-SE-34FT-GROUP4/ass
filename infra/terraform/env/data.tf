@@ -21,6 +21,13 @@ resource "aws_db_parameter_group" "mysql" {
     name  = "collation_server"
     value = "utf8mb4_unicode_ci"
   }
+  # The JDBC URL uses serverTimezone=Asia/Singapore, so DATETIME columns hold
+  # Singapore time. NOW() must agree, or `expire_time < NOW()` in the order
+  # expiry job only matches 8 hours late (RDS defaults to UTC).
+  parameter {
+    name  = "time_zone"
+    value = "Asia/Singapore"
+  }
 }
 
 resource "aws_db_instance" "mysql" {
@@ -57,10 +64,12 @@ resource "aws_db_instance" "mysql" {
 }
 
 # One database user per service (proposal: Core and Chat each connect with their
-# own user). Terraform only generates the credentials; ZHOU YUXIN's grant script
-# (WP8) creates the users with them. Until it has run, set db_use_master_user.
+# own user). Terraform only generates the credentials; the grant script
+# infra/db/grants.sql (WP8) creates the users with them, run through
+# infra/scripts/run-sql.sh. A service logs in as its own user only once it is
+# listed in var.db_service_users.
 locals {
-  db_services = toset(["core", "chat"])
+  db_services = toset(["core", "search", "chat"])
 }
 
 resource "random_password" "db" {

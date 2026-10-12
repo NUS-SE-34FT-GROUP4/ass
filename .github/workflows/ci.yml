@@ -105,8 +105,12 @@ jobs:
           echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum -c -
           tar -xzf gitleaks.tar.gz -C "$RUNNER_TEMP" gitleaks
 
+      # fetch-depth 0 also fetches every other branch, and gitleaks scans all refs
+      # by default, so a leak on someone's open branch failed every PR and main.
+      # HEAD limits the scan to this commit's history; for a PR that is the merge
+      # commit, so the PR's own commits are still scanned.
       - name: Scan git history
-        run: $RUNNER_TEMP/gitleaks git . --config gitleaks.toml --redact --no-banner --verbose --exit-code 1
+        run: $RUNNER_TEMP/gitleaks git . --log-opts="HEAD" --redact --no-banner --verbose --exit-code 1
 
   trivy:
     name: trivy
