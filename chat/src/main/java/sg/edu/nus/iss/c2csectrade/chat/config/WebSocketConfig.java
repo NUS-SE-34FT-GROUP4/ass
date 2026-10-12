@@ -1,6 +1,7 @@
 package sg.edu.nus.iss.c2csectrade.chat.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -12,6 +13,9 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+    @Value("${app.cors.allowed-origins:http://localhost:8081,http://127.0.0.1:8081,http://localhost,http://127.0.0.1}")
+    private String[] allowedOrigins;
+
     @Autowired
     private WebSocketAuthInterceptor webSocketAuthInterceptor;
 
@@ -19,7 +23,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // Register the STOMP endpoint clients use to open the WebSocket
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
+                .setAllowedOrigins(allowedOrigins)
                 .withSockJS();
     }
 

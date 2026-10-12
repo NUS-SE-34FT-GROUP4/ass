@@ -14,13 +14,16 @@ import sg.edu.nus.iss.c2csectrade.security.JwtTokenProvider;
 import sg.edu.nus.iss.c2csectrade.security.UserDetailsServiceImpl;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * The load balancer probes /actuator/health/liveness without a token, so the
  * security rules must let it through while everything else stays protected.
  */
-@WebMvcTest(controllers = SecurityConfigTest.ProbeController.class)
+@WebMvcTest(controllers = SecurityConfigTest.ProbeController.class,
+        properties = "app.cors.allowed-origins=https://spa.example.test")
 class SecurityConfigTest {
 
     // Stands in for the application class, which would also start MyBatis
@@ -59,5 +62,30 @@ class SecurityConfigTest {
     @Test
     void otherEndpointsStillNeedAToken() throws Exception {
         mvc.perform(get("/api/orders")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void trustedOriginCanPreflightBearerRequests() throws Exception {
+        mvc.perform(options("/api/orders")
+                .header("Origin", "https://spa.example.test")
+                .header("Access-Control-Request-Method", "GET")
+                .header("Access-Control-Request-Headers", "Authorization"))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Access-Control-Allow-Origin", "https://spa.example.test"));
+    }
+
+    @Test
+    void untrustedOriginIsRejected() throws Exception {
+        mvc.perform(options("/api/orders")
+                .header("Origin", "https://untrusted.example.test")
+                .header("Access-Control-Request-Method", "GET"))
+            .andExpect(status().isForbidden())
+            .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+    }
+
+    @Test
+    void trustedOriginStillNeedsAuthentication() throws Exception {
+        mvc.perform(get("/api/orders").header("Origin", "https://spa.example.test"))
+            .andExpect(status().isUnauthorized());
     }
 }

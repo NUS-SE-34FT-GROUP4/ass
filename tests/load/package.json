@@ -1,0 +1,7 @@
+{
+  "name": "ass-load-fixtures",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node verify-offline.mjs && node verify-generator.mjs" },
+  "dependencies": { "bcryptjs": "3.0.2" }
+}
