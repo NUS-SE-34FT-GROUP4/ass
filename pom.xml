@@ -30,17 +30,6 @@
     <properties>
         <!-- Default to Java 17 for maximum compatibility (Lombok + toolchain) -->
         <java.version>17</java.version>
-        <jacoco.version>0.8.14</jacoco.version>
-        <!-- Reviewed Bearer-header authentication only; no cookie/session authentication.
-             Re-review these exact-file exceptions if authentication changes. CORS is NOT excluded. -->
-        <sonar.issue.ignore.multicriteria>coreCsrf,chatCsrf</sonar.issue.ignore.multicriteria>
-        <sonar.issue.ignore.multicriteria.coreCsrf.ruleKey>java:S4502</sonar.issue.ignore.multicriteria.coreCsrf.ruleKey>
-        <sonar.issue.ignore.multicriteria.coreCsrf.resourceKey>**/sg/edu/nus/iss/c2csectrade/config/SecurityConfig.java</sonar.issue.ignore.multicriteria.coreCsrf.resourceKey>
-        <sonar.issue.ignore.multicriteria.chatCsrf.ruleKey>java:S4502</sonar.issue.ignore.multicriteria.chatCsrf.ruleKey>
-        <sonar.issue.ignore.multicriteria.chatCsrf.resourceKey>**/sg/edu/nus/iss/c2csectrade/chat/config/SecurityConfig.java</sonar.issue.ignore.multicriteria.chatCsrf.resourceKey>
-        <!-- Temporary Chat copies from PR #31: remove each entry when consolidated into common.
-             Exact files only; new security classes remain included. See docs/sonar-exceptions.md. -->
-        <sonar.cpd.exclusions>**/sg/edu/nus/iss/c2csectrade/chat/entity/User.java,**/sg/edu/nus/iss/c2csectrade/chat/security/JwtAuthenticationFilter.java,**/sg/edu/nus/iss/c2csectrade/chat/security/UserDetailsImpl.java,**/sg/edu/nus/iss/c2csectrade/chat/security/UserDetailsServiceImpl.java,**/sg/edu/nus/iss/c2csectrade/chat/config/SecurityConfig.java,**/sg/edu/nus/iss/c2csectrade/chat/config/RabbitMQConfig.java,**/sg/edu/nus/iss/c2csectrade/chat/mapper/UserMapper.java</sonar.cpd.exclusions>
         <jjwt.version>0.11.5</jjwt.version>
         <!-- Patch releases ahead of what Boot 3.5.16 manages, each fixing a
              CRITICAL CVE that the Trivy gate in CI fails on. Drop an override
@@ -105,22 +94,6 @@
             </plugins>
         </pluginManagement>
         <plugins>
-            <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <version>${jacoco.version}</version>
-                <executions>
-                    <execution>
-                        <id>coverage-agent</id>
-                        <goals><goal>prepare-agent</goal></goals>
-                    </execution>
-                    <execution>
-                        <id>coverage-report</id>
-                        <phase>verify</phase>
-                        <goals><goal>report</goal></goals>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
