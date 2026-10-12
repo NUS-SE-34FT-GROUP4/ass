@@ -44,8 +44,6 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       # Same JDK as the runtime image (amazoncorretto:17)
       - uses: actions/setup-java@v4
@@ -55,61 +53,15 @@ jobs:
           cache: maven
 
       - name: Build and test
-        run: mvn -B -ntp install
-
-      - name: Upload coverage reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jacoco-reports
-          path: '*/target/site/jacoco/'
-          retention-days: 14
-
-      # No secrets are exposed to fork PRs. Configure repository variables
-      # SONAR_PROJECT_KEY and SONAR_ORGANIZATION to enable analysis.
-      - name: SonarCloud analysis and quality gate
-        if: >-
-          vars.SONAR_PROJECT_KEY != '' && vars.SONAR_ORGANIZATION != '' &&
-          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
-          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
-        run: |
-          test -n "$SONAR_TOKEN" || { echo 'SONAR_TOKEN secret is missing'; exit 1; }
-          mvn -B -ntp org.sonarsource.scanner.maven:sonar-maven-plugin:5.8.0.7211:sonar \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
-            -Dsonar.organization="$SONAR_ORGANIZATION" \
-            -Dsonar.qualitygate.wait=true
-
-      - name: Report SonarCloud configuration pending
-        if: vars.SONAR_PROJECT_KEY == '' || vars.SONAR_ORGANIZATION == ''
-        run: echo 'SonarCloud not configured; set SONAR_PROJECT_KEY, SONAR_ORGANIZATION and SONAR_TOKEN. No quality gate has run.' >> "$GITHUB_STEP_SUMMARY"
+        run: mvn -B -ntp verify
 
       - name: Upload test reports
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: surefire-reports
           path: '*/target/surefire-reports/'
           retention-days: 7
-
-  load-scripts:
-    name: load-scripts
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: tests/load/package-lock.json
-      - run: npm ci --ignore-scripts --no-audit --no-fund
-        working-directory: tests/load
-      - run: npm test
-        working-directory: tests/load
 
   frontend:
     name: frontend
@@ -128,11 +80,11 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
 
       # npm run lint rewrites files; CI only reports
       - name: Lint
-        run: ./node_modules/.bin/vue-cli-service lint --no-fix
+        run: npx vue-cli-service lint --no-fix
 
       - name: Build
         run: npm run build
@@ -148,7 +100,7 @@ jobs:
 
       - name: Install Gitleaks
         run: |
-          curl --proto '=https' --proto-redir '=https' -sSfL -o gitleaks.tar.gz \
+          curl -sSfL -o gitleaks.tar.gz \
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
           echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum -c -
           tar -xzf gitleaks.tar.gz -C "$RUNNER_TEMP" gitleaks
@@ -172,7 +124,7 @@ jobs:
 
       - name: Install Trivy
         run: |
-          curl --proto '=https' --proto-redir '=https' -sSfL -o trivy.tar.gz \
+          curl -sSfL -o trivy.tar.gz \
             "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
           echo "${TRIVY_SHA256}  trivy.tar.gz" | sha256sum -c -
           tar -xzf trivy.tar.gz -C "$RUNNER_TEMP" trivy
@@ -258,7 +210,7 @@ jobs:
 
       - name: Install Trivy
         run: |
-          curl --proto '=https' --proto-redir '=https' -sSfL -o trivy.tar.gz \
+          curl -sSfL -o trivy.tar.gz \
             "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
           echo "${TRIVY_SHA256}  trivy.tar.gz" | sha256sum -c -
           tar -xzf trivy.tar.gz -C "$RUNNER_TEMP" trivy

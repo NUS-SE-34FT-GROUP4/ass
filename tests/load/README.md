@@ -4,11 +4,6 @@ WP10 deliverable for CUI ZIJIAN. Scripts target actual current controllers and
 can be reused after service extraction. Run from repository root. k6 v2.3.0 was
 used for offline validation. Requires k6, and Node.js for fixture generation.
 
-## Local validation
-
-See [LOCAL.md](LOCAL.md) for the isolated Docker environment, password generation,
-verified import/index preflight and retained baseline results.
-
 ## Data preparation
 
 `generate-fixtures.mjs` emits SQL for the existing schema plus a JSON fixture.
@@ -19,10 +14,8 @@ with the project's schema and roles. The generator does not apply SQL or reset
 any database. High stock is intentional for sustained-load runs; oversell uses
 a separate low-stock product. Confirm seed cardinality and seller separation.
 
-Run `npm ci --prefix tests/load` first. Passwords and validated BCrypt hashes are
-generated automatically and saved privately in generated/credentials.json.
-Optional external `LOAD_PASSWORD_HASH` and `LOAD_PAYMENT_HASH` require matching
-`LOAD_PASSWORD` and six-digit `LOAD_PAYMENT_PASSWORD`. Generate with:
+Supply BCrypt hashes via `LOAD_PASSWORD_HASH` and `LOAD_PAYMENT_HASH`, and the
+matching six-digit `LOAD_PAYMENT_PASSWORD`. Generate with:
 
 ```text
 node tests/load/generate-fixtures.mjs
@@ -64,8 +57,7 @@ dataset counts, image digests, task sizes, region and load-generator location.
 10% cart/chat (5/5); 5% buy-now + simulated payment. Percentages describe business
 operations; multi-request flows do not produce those exact HTTP percentages.
 Each VU owns a separate buyer. Chat uses SockJS WebSocket transport and STOMP
-authentication, subscribes (200ms settling delay for the simple broker), sends
-to the same test user and requires
+authentication/subscription receipt, sends to the same test user and requires
 the matching message back. This exercises persistence and delivery on one
 connection; cross-instance recipient delivery needs a separate paired-user test.
 Smoke excludes writes/chat. Think time defaults to one second per operation.
@@ -117,10 +109,10 @@ Retain scaling activities and policy targets/cooldowns. Compare throughput,
 latency, failures and time to first/maximum scale-out. Fixed staging smoke cannot
 prove AWS scaling. No numerical performance result is claimed before a real run.
 
-## Historical validation at original A-segment handoff
+## Current handoff
 
 Offline behavior verification: `node tests/load/verify-offline.mjs` exercises all
-six operation branches, SockJS/STOMP connection/message handling, HTTP-200 business
+six operation branches, SockJS/STOMP receipt/message handling, HTTP-200 business
 failure detection, write gating, smoke read-only behavior and search-only routing.
 It uses mock k6 modules and is not a live protocol/integration test. Actual k6
 script parsing was checked with `k6 inspect` for both scripts. Fixture cardinality
