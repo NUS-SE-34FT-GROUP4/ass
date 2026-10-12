@@ -76,6 +76,22 @@ public class Events {
         private Long productId;
     }
 
+    /**
+     * Sent by Core on routing key product.delisted after an administrator
+     * delists a product. Chat persists a system message to the seller and
+     * pushes it over WebSocket, so Core needs no privilege on chat_message.
+     * The class must stay in this package: both sides' JSON message
+     * converters only trust sg.edu.nus.iss.c2csectrade.event.
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ProductDelistedEvent implements Serializable {
+        private Long productId;
+        private String productName;
+        private String sellerUsername;
+    }
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

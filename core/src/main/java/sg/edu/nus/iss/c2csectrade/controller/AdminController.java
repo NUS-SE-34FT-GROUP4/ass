@@ -3,6 +3,8 @@ package sg.edu.nus.iss.c2csectrade.controller;
 import sg.edu.nus.iss.c2csectrade.entity.Product;
 import sg.edu.nus.iss.c2csectrade.entity.Report;
 import sg.edu.nus.iss.c2csectrade.entity.User;
+import sg.edu.nus.iss.c2csectrade.event.EventPublisher;
+import sg.edu.nus.iss.c2csectrade.event.Events;
 import sg.edu.nus.iss.c2csectrade.mapper.UserMapper;
 import sg.edu.nus.iss.c2csectrade.service.ProductService;
 import sg.edu.nus.iss.c2csectrade.service.ReportService;
@@ -28,6 +30,9 @@ public class AdminController {
 
     @Autowired
     private ProductService productService;
+
+    @Autowired
+    private EventPublisher eventPublisher;
 
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
@@ -125,8 +130,18 @@ public class AdminController {
             productService.delistProduct(productId);
             System.out.println("[DELIST] Product delisted: " + product.getName());
 
-            // Note: Chat notifications for delisting are now handled by the Chat module
-            // Admin operations should call the Chat module's REST API to send notifications
+            // Chat persists and pushes the seller notification; Core holds no
+            // privilege on chat_message, so it publishes an event instead.
+            try {
+                User owner = userMapper.selectById(product.getUserId());
+                if (owner != null) {
+                    eventPublisher.publishProductDelisted(new Events.ProductDelistedEvent(
+                            productId, product.getName(), owner.getUsername()));
+                    System.out.println("[DELIST] Delist event published for seller: " + owner.getUsername());
+                }
+            } catch (Exception e) {
+                System.err.println("[DELIST] Failed to publish delist event: " + e.getMessage());
+            }
 
             // Mark the report as handled
             try {

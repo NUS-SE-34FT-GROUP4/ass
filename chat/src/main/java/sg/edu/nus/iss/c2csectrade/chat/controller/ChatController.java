@@ -172,8 +172,10 @@ public class ChatController {
         }
     }
 
-    // REST API: administrator broadcasts a system message to all users
-    @PostMapping("/api/message/broadcast")
+    // REST API: administrator broadcasts a system message to all users.
+    // Path stays under /api/chat/ so the ALB routes it to Chat (only /ws and
+    // /api/chat/* go to this service).
+    @PostMapping("/api/chat/broadcast")
     public ResponseEntity<?> broadcastSystemMessage(
             @RequestBody java.util.Map<String, String> payload,
             Authentication authentication) {
