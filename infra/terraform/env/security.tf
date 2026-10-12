@@ -45,6 +45,16 @@ resource "aws_vpc_security_group_ingress_rule" "services_from_alb" {
   to_port                      = var.container_port
 }
 
+# Service to service inside the VPC (Core -> Search through Cloud Map)
+resource "aws_vpc_security_group_ingress_rule" "services_from_services" {
+  security_group_id            = aws_security_group.services.id
+  referenced_security_group_id = aws_security_group.services.id
+  ip_protocol                  = "tcp"
+  from_port                    = var.container_port
+  to_port                      = var.container_port
+  description                  = "Service to service, e.g. Core to Search"
+}
+
 # Outbound: the data stores inside the VPC, and HTTPS through the NAT gateway
 # for ECR, Secrets Manager, S3 and CloudWatch. Nothing else leaves the VPC.
 resource "aws_vpc_security_group_egress_rule" "services_vpc" {
