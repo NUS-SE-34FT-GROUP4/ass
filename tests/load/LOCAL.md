@@ -1,9 +1,15 @@
+## Split-service baseline update (2026-10-12)
+
+The current runner starts Core, Search, Chat and an nginx gateway on localhost:18080. Search uses /api/search; /api/chat and /ws route to Chat. Use a new WP10_PROJECT and archive the old generated directory before seeding. The previous recorded baseline below describes the old Core-only revision, not this runner.
+
+Seed indexing loads a snapshot of the isolated MySQL fixture rows directly into the local index. It does not prove RabbitMQ event propagation. All load traffic uses the gateway; search and chat must pass separately. No AWS services are contacted.
+
 # WP10: reproducible local baseline
 
 Requirements: Docker Desktop/Engine with Compose, Python 3, internet for the first
 build, about 8 GB available to Docker. Java 17, Maven, Node 22 and k6 run in
 containers. Run commands from the repository root. This environment is named
-`ass-wp10-local`, uses dedicated named volumes, exposes only the backend on
+`ass-wp10-local`, uses dedicated named volumes, exposes only the gateway on
 `127.0.0.1:18080`, and never connects to staging or AWS.
 
 ```sh
@@ -16,15 +22,14 @@ python3 tests/load/local.py run --mode mixed --vus 20 --ramp 30s --hold 2m --dow
 python3 tests/load/local.py audit
 ```
 
-`build` runs Maven `install` (including tests, packaging and JaCoCo), the Node
+`build` runs Maven `clean install` (including tests, packaging and JaCoCo), the Node
 checks, and builds MinIO from a pinned upstream release. The old MinIO prebuilt
 image download is no longer available; see the [upstream source-build guidance](https://github.com/minio/minio).
 The chosen release matches a historical local development dependency, not a
 claim that this environment is suitable for production. Docker image IDs and
-runtime resources are captured with each run. Search and chat business routes
-currently run inside Core; the separate service modules are scaffolds. This
-baseline measures one real Core instance with MySQL, Redis, RabbitMQ,
-Elasticsearch and MinIO, and does not establish AWS scaling performance.
+runtime resources are captured with each run. Search and Chat run in their own containers behind the gateway. This baseline
+measures one instance per service with MySQL, Redis, RabbitMQ, Elasticsearch
+and MinIO, and does not establish AWS scaling performance.
 
 `seed` imports exactly 2,000 load users (one seller, 1,999 buyers) and 10,000
 products in reserved ID ranges. Existing schema seed accounts remain present.

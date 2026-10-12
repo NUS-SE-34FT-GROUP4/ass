@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
-const base = 'http://backend:8080';
+const base = 'http://gateway:8080';
 const dir = 'tests/load/generated';
 const credentials = JSON.parse(fs.readFileSync(`${dir}/credentials.json`));
 const fixtures = JSON.parse(fs.readFileSync(`${dir}/fixtures.json`));
@@ -11,6 +11,10 @@ async function request(path, options = {}) {
   const text = await r.text();
   try { return JSON.parse(text); } catch { return text; }
 }
+for (const service of ['backend', 'search', 'chat']) {
+  const health = await fetch(`http://${service}:8080/actuator/health/liveness`);
+  assert.equal((await health.json()).status, 'UP', `${service} is not alive`);
+}
 // The local runner provisions a one-use captcha in its isolated Redis only.
 // Login still executes the application's AuthenticationManager and BCrypt.
 const login = await request('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username:credentials.username,password:credentials.password,captchaId:process.env.CAPTCHA_ID,captchaCode:process.env.CAPTCHA_CODE}) });
@@ -18,7 +22,7 @@ assert.ok(login.token, 'Real password login did not return JWT');
 assert.equal(login.username, credentials.username);
 const headers = {Authorization: `Bearer ${fixtures.users[0].token}`};
 await request('/api/cart/list', {headers});
-await request('/api/products/sync', {method:'POST',headers});
+// Seed indexing is performed separately; never reset the index during a check.
 const es = await fetch('http://elasticsearch:9200/products/_refresh', {method:'POST'});
 assert.ok(es.ok);
 const countResponse = await fetch('http://elasticsearch:9200/products/_count', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:{range:{productId:{gte:manifest.productStart,lt:manifest.productStart+manifest.products}}}})});
@@ -27,7 +31,7 @@ const count = await countResponse.json();
 assert.equal(count.count, manifest.products, 'Index cardinality mismatch');
 const keywordCounts = {};
 for (const word of fixtures.keywords) {
-  const rows = await request(`/api/products/search?keyword=${word}&page=0&size=20`);
+  const rows = await request(`/api/search?keyword=${word}&page=0&size=20`);
   assert.ok(Array.isArray(rows) && rows.length > 0, `No indexed results for ${word}`);
   keywordCounts[word] = rows.length;
 }

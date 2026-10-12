@@ -41,13 +41,15 @@ def init():
 
 def build():
     command(['docker', 'run', '--rm', '-v', f'{ROOT}:/app', '-v', 'ass-wp10-maven:/root/.m2', '-w', '/app',
-             'maven:3.9-amazoncorretto-17', 'mvn', '-B', '-ntp', 'install'])
+             'maven:3.9-amazoncorretto-17', 'mvn', '-B', '-ntp', 'clean', 'install'])
     command(['docker','run','--rm','-v',f'{ROOT}:/app','-w','/app/tests/load','node:22-alpine','npm','ci','--ignore-scripts','--no-audit','--no-fund'])
     command(['docker','run','--rm','-v',f'{ROOT}:/app','-w','/app/tests/load','node:22-alpine','npm','test'])
-    compose('build','minio','backend')
+    compose('build','minio','backend','search','chat')
 
 def up():
-    compose('up','-d','mysql','redis','rabbitmq','elasticsearch','minio','backend')
+    compose('up','-d','mysql','redis','rabbitmq','elasticsearch','minio','backend','search','chat','gateway')
+    # Refresh nginx DNS after replacing application containers.
+    compose('restart', 'gateway')
     deadline = time.monotonic() + 300
     while time.monotonic() < deadline:
         try:
@@ -72,6 +74,14 @@ def seed():
     manifest['project'] = PROJECT
     manifest_file.write_text(json.dumps(manifest,indent=2)+'\n')
     verify_data()
+    index_seed()
+
+def index_seed():
+    # Local seeded fixture snapshot only, not validation of event delivery.
+    m = verify_data()
+    rows = sql(f"SELECT JSON_OBJECT('id',CAST(id AS CHAR),'productId',id,'userId',user_id,'name',name,'description',description,'price',price,'conditionLevel',condition_level,'location',location,'status',status,'category',category) FROM pms_product WHERE id>=1000000 AND id<{1000000+m['products']};")
+    (LOAD/'generated/index-documents.json').write_text('['+','.join(rows.splitlines())+']')
+    compose('run','--rm','-T','node','tests/load/index-seed.mjs')
 
 def verify_data():
     m = json.loads((LOAD/'generated/manifest.json').read_text())
@@ -132,7 +142,7 @@ def oversell():
     label = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-oversell'
     evidence(label+'-before')
     args=['run','--rm','-T','k6','run','--no-color','--summary-export',f'tests/load/results/{label}.json',
-          '-e','BASE_URL=http://backend:8080','-e','FIXTURES=./generated/fixtures.json',
+          '-e','BASE_URL=http://gateway:8080','-e','FIXTURES=./generated/fixtures.json',
           '-e','ENABLE_WRITES=true','-e','PRODUCT_ID=2000000','-e','INITIAL_STOCK=1','-e','BUYERS=20',
           'tests/load/oversell.js']
     try:
@@ -150,9 +160,9 @@ def run(mode, vus, ramp, hold, down):
     label = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+mode
     evidence(label+'-before')
     revision = command(['git','rev-parse','HEAD'],capture_output=True).stdout.strip()
-    options={'BASE_URL':'http://backend:8080','FIXTURES':'./generated/fixtures.json','MODE':mode,
+    options={'BASE_URL':'http://gateway:8080','FIXTURES':'./generated/fixtures.json','MODE':mode,
              'VUS':str(vus),'RAMP':ramp,'HOLD':hold,'DOWN':down,'ENABLE_WRITES':'true' if mode=='mixed' else 'false',
-             'DEPLOYMENT':PROJECT+'-core-1','REVISION':revision,'SUMMARY':f'tests/load/results/{label}.json'}
+             'SEARCH_PATH':'/api/search','DEPLOYMENT':PROJECT+'-core1-search1-chat1','REVISION':revision,'SUMMARY':f'tests/load/results/{label}.json'}
     args=['run','--rm','-T','k6','run','--no-color']
     for key,value in options.items(): args += ['-e',f'{key}={value}']
     args += ['tests/load/marketplace.js']
