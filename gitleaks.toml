@@ -1,0 +1,11 @@
+# Gitleaks config: default rules plus explicit allowances.
+[extend]
+useDefault = true
+
+[allowlist]
+  # Commit e0d551e introduced a dummy JWT secret in chat/src/test/resources
+  # (a fake value used by the full-context test in CI, not a real credential).
+  # The line now carries a gitleaks:allow annotation; the commit-level entry
+  # below keeps history scans green without rewriting history.
+  description = "Dummy JWT test secret introduced in e0d551e"
+  commits = ["e0d551e7128b0c61bccaaf1d0ff91cf0a6935438"]

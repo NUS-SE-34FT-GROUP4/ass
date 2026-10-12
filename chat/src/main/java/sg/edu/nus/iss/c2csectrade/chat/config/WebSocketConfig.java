@@ -1,4 +1,4 @@
-package sg.edu.nus.iss.c2csectrade.config;
+package sg.edu.nus.iss.c2csectrade.chat.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;

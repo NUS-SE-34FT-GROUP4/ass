@@ -1,10 +1,10 @@
-package sg.edu.nus.iss.c2csectrade.controller;
+package sg.edu.nus.iss.c2csectrade.chat.controller;
 
-import sg.edu.nus.iss.c2csectrade.dto.ChatMessageDTO;
-import sg.edu.nus.iss.c2csectrade.dto.ConversationDTO;
-import sg.edu.nus.iss.c2csectrade.entity.ChatMessage;
-import sg.edu.nus.iss.c2csectrade.event.ChatMessageFanoutPublisher;
-import sg.edu.nus.iss.c2csectrade.service.ChatMessageService;
+import sg.edu.nus.iss.c2csectrade.chat.dto.ChatMessageDTO;
+import sg.edu.nus.iss.c2csectrade.chat.dto.ConversationDTO;
+import sg.edu.nus.iss.c2csectrade.chat.entity.ChatMessage;
+import sg.edu.nus.iss.c2csectrade.chat.event.ChatMessageFanoutPublisher;
+import sg.edu.nus.iss.c2csectrade.chat.service.ChatMessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -196,13 +196,13 @@ public class ChatController {
 
             // Load all users
             String adminUsername = authentication.getName();
-            List<sg.edu.nus.iss.c2csectrade.entity.User> allUsers = chatMessageService.getAllUsers();
+            List<sg.edu.nus.iss.c2csectrade.chat.entity.User> allUsers = chatMessageService.getAllUsers();
             System.out.println("[BROADCAST] Found " + allUsers.size() + " users");
 
             int successCount = 0;
             int failCount = 0;
 
-            for (sg.edu.nus.iss.c2csectrade.entity.User user : allUsers) {
+            for (sg.edu.nus.iss.c2csectrade.chat.entity.User user : allUsers) {
                 // Skip the administrator themselves
                 if (user.getUsername().equals(adminUsername)) {
                     System.out.println("[BROADCAST] Skipping administrator: " + user.getUsername());

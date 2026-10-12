@@ -1,4 +1,4 @@
-package sg.edu.nus.iss.c2csectrade.entity;
+package sg.edu.nus.iss.c2csectrade.chat.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
