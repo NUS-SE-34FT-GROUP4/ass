@@ -1,6 +1,7 @@
-package sg.edu.nus.iss.c2csectrade.event;
+package sg.edu.nus.iss.c2csectrade.chat.event;
 
-import sg.edu.nus.iss.c2csectrade.dto.ChatMessageDTO;
+import sg.edu.nus.iss.c2csectrade.chat.dto.ChatMessageDTO;
+import sg.edu.nus.iss.c2csectrade.event.Events;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -63,7 +64,7 @@ class ChatMessageFanoutConsumerTest {
      */
     @Test
     void fanoutEventRoundTripsThroughTheApplicationConverter() {
-        MessageConverter converter = new sg.edu.nus.iss.c2csectrade.config.RabbitMQConfig().jsonMessageConverter();
+        MessageConverter converter = new sg.edu.nus.iss.c2csectrade.chat.config.RabbitMQConfig().jsonMessageConverter();
         Events.ChatFanoutEvent event = new Events.ChatFanoutEvent(
                 "seller_lvl1", "seller_lvl2", "seller_lvl1",
                 "round trip", new Date(1791465000000L), false);

@@ -164,6 +164,31 @@ services:
       - c2csectrade-network
     restart: unless-stopped
 
+  # Chat Service: handles WebSocket connections and chat message fanout
+  chat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE: chat
+    container_name: c2csectrade-chat
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/trade?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: tradeuser
+      SPRING_DATASOURCE_PASSWORD: tradepass
+      SPRING_RABBITMQ_HOST: rabbitmq
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (see .env.example)}
+    ports:
+      - "8082:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - c2csectrade-network
+    restart: unless-stopped
+
   # Frontend Application
   frontend:
     build:

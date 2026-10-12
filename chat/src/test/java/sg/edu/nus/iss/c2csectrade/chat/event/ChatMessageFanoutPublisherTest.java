@@ -1,7 +1,8 @@
-package sg.edu.nus.iss.c2csectrade.event;
+package sg.edu.nus.iss.c2csectrade.chat.event;
 
-import sg.edu.nus.iss.c2csectrade.config.RabbitMQConfig;
-import sg.edu.nus.iss.c2csectrade.dto.ChatMessageDTO;
+import sg.edu.nus.iss.c2csectrade.chat.config.RabbitMQConfig;
+import sg.edu.nus.iss.c2csectrade.chat.dto.ChatMessageDTO;
+import sg.edu.nus.iss.c2csectrade.event.Events;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;

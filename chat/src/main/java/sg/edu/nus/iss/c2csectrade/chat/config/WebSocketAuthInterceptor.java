@@ -1,4 +1,4 @@
-package sg.edu.nus.iss.c2csectrade.config;
+package sg.edu.nus.iss.c2csectrade.chat.config;
 
 import sg.edu.nus.iss.c2csectrade.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;

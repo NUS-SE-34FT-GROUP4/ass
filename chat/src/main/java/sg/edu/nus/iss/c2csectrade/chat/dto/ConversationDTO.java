@@ -1,4 +1,4 @@
-package sg.edu.nus.iss.c2csectrade.dto;
+package sg.edu.nus.iss.c2csectrade.chat.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

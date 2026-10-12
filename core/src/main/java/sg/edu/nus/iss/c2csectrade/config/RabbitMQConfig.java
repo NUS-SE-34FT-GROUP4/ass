@@ -47,9 +47,6 @@ public class RabbitMQConfig {
     public static final String PRODUCT_STOCK_LOW_QUEUE = "product.stock.low.queue";
     public static final String PRODUCT_STOCK_LOW_ROUTING_KEY = "product.stock.low";
 
-    // ============ Chat Fanout (cross-instance delivery) ============
-    public static final String CHAT_FANOUT_EXCHANGE = "chat.fanout.exchange";
-
     /**
      * JSON Message Converter
      */
@@ -217,24 +214,6 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(productStockLowQueue())
                 .to(productExchange())
                 .with(PRODUCT_STOCK_LOW_ROUTING_KEY);
-    }
-
-    // ============ Chat Fanout Exchange and Queue ============
-
-    @Bean
-    public FanoutExchange chatFanoutExchange() {
-        return new FanoutExchange(CHAT_FANOUT_EXCHANGE, true, false);
-    }
-
-    @Bean
-    public Queue chatFanoutQueue() {
-        return new AnonymousQueue();
-    }
-
-    @Bean
-    public Binding chatFanoutBinding() {
-        return BindingBuilder.bind(chatFanoutQueue())
-                .to(chatFanoutExchange());
     }
 }
 
