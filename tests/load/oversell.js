@@ -7,9 +7,10 @@ const productId = Number(__ENV.PRODUCT_ID);
 const stock = Number(__ENV.INITIAL_STOCK || 1);
 const paid = new Counter('paid_orders');
 const auditFailed = new Rate('inventory_audit_failed');
+const unexpectedRejections = new Rate('unexpected_payment_rejections');
 export const options = {
   scenarios: { purchase: { executor: 'per-vu-iterations', vus: buyers, iterations: 1, maxDuration: '1m' } },
-  thresholds: { paid_orders: [`count==${stock}`], inventory_audit_failed: ['rate==0'] },
+  thresholds: { paid_orders: [`count==${stock}`], inventory_audit_failed: ['rate==0'], unexpected_payment_rejections: ['rate==0'] },
 };
 const params = user => ({ headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' }, tags: { name: 'oversell_pay' }, timeout: '10s' });
 export function setup() {
@@ -27,11 +28,16 @@ export function setup() {
 }
 export default function (orders) {
   const user = data.users[__VU - 1];
-  const r = http.post(`${base}/api/orders/${orders[__VU-1]}/pay`, JSON.stringify({ paymentMethod: 'BALANCE', password: user.paymentPassword }), params(user));
+  const r = http.post(`${base}/api/orders/${orders[__VU-1]}/pay`, JSON.stringify({ paymentMethod: 'balance', password: user.paymentPassword }), params(user));
   const success = r.status === 200 && r.json('status') === 'PAID';
   paid.add(success ? 1 : 0);
-  // Rejection statuses are recorded, never reclassified as successful payments.
-  check(r, { 'payment paid or rejected': () => success || r.status >= 400 });
+  // Reject unrelated authentication/database errors rather than treating any
+  // HTTP error as an expected stock conflict. HTTP failure metrics stay intact.
+  let message = '';
+  try { message = r.json('message') || ''; } catch (_) {}
+  const stockRejection = r.status >= 400 && /Not enough stock|Could not deduct stock/.test(message);
+  unexpectedRejections.add(!success && !stockRejection);
+  check(r, { 'payment paid or rejected for stock': () => success || stockRejection });
 }
 export function teardown(orders) {
   let paidCount = 0;

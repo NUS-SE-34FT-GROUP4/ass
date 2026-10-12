@@ -7,18 +7,21 @@ export const options = configuredOptions;
 const errors = new Rate('business_errors');
 const operations = new Counter('business_operations');
 const chatLatency = new Trend('chat_roundtrip_ms', true);
+const readLatency = Object.fromEntries(['browse', 'search', 'detail', 'similar', 'personalized', 'cart_list']
+  .map(name => [name, new Trend(`read_${name}_ms`, true)]));
 function request(method, path, user, body, name, validate = () => true) {
   const r = http.request(method, base + path, body === undefined ? null : JSON.stringify(body), {
     headers: { 'Content-Type': 'application/json', ...(user ? { Authorization: `Bearer ${user.token}` } : {}) },
     tags: { name, kind: method === 'GET' ? 'read' : 'write' }, timeout: '10s',
   });
+  if (method === 'GET' && readLatency[name]) readLatency[name].add(r.timings.duration);
   let value;
   try { value = r.json(); } catch (_) { value = null; }
   const ok = check(r, { [name]: () => r.status >= 200 && r.status < 300 && validate(value) });
   errors.add(!ok);
   return ok ? value : null;
 }
-function chat(user) {
+export function chat(user) {
   // Spring SockJS WebSocket transport: JSON arrays wrap STOMP frames.
   const url = base.replace(/^http/, 'ws') + `/ws/000/load-${__VU}-${__ITER}/websocket`;
   const marker = `load-${__VU}-${__ITER}-${Date.now()}`;
@@ -32,12 +35,17 @@ function chat(user) {
       } else if (raw.startsWith('a')) {
         for (const msg of JSON.parse(raw.slice(1))) {
           if (msg.startsWith('CONNECTED')) {
-            socket.send(frame('SUBSCRIBE\nid:load\ndestination:/user/queue/private\nreceipt:subscribed\n\n\0'));
-          } else if (msg.startsWith('RECEIPT') && msg.includes('receipt-id:subscribed')) {
-            sentAt = Date.now();
-            socket.send(frame('SEND\ndestination:/app/chat.sendMessage\ncontent-type:application/json\n\n' +
-              JSON.stringify({ recipient: user.username, content: marker }) + '\0'));
-          } else if (msg.startsWith('MESSAGE') && msg.includes(marker)) {
+            socket.send(frame('SUBSCRIBE\nid:load\ndestination:/user/queue/private\n\n\0'));
+            // Spring's simple broker does not implement STOMP RECEIPT.
+            // Allow its asynchronous subscription handler to run, then send
+            // once. Only a matching MESSAGE counts as successful delivery;
+            // the delay itself is never treated as an acknowledgement.
+            socket.setTimeout(() => {
+              sentAt = Date.now();
+              socket.send(frame('SEND\ndestination:/app/chat.sendMessage\ncontent-type:application/json\n\n' +
+                JSON.stringify({ recipient: user.username, content: marker }) + '\0'));
+            }, 200);
+          } else if (msg.startsWith('MESSAGE') && msg.includes(marker) && !delivered && sentAt > 0) {
             delivered = true;
             chatLatency.add(Date.now() - sentAt);
             socket.close();
@@ -87,14 +95,14 @@ export default function () {
     operations.add(1, { operation: 'purchase' });
     const order = request('POST', '/api/orders/buy-now', user, { productId: id, quantity: 1 }, 'buy_now', v => v && v.id);
     if (order) request('POST', `/api/orders/${order.id}/pay`, user,
-      { paymentMethod: 'BALANCE', password: user.paymentPassword }, 'pay', v => v && v.status === 'PAID');
+      { paymentMethod: 'balance', password: user.paymentPassword }, 'pay', v => v && v.status === 'PAID');
   }
   sleep(Number(__ENV.THINK_TIME || 1));
 }
 export function handleSummary(summary) {
   return { [__ENV.SUMMARY || './summary.json']: JSON.stringify({
     run: { mode, base, timestamp: new Date().toISOString(), revision: __ENV.REVISION || 'unknown',
-      deployment: __ENV.DEPLOYMENT || 'unspecified', ramp: __ENV.RAMP || '5m', hold: __ENV.HOLD || (mode === 'smoke' ? '30s' : '15m'), vus: Number(__ENV.VUS || (mode === 'smoke' ? 2 : 200)) },
+      deployment: __ENV.DEPLOYMENT || 'unspecified', down: __ENV.DOWN || '1m', thinkTime: Number(__ENV.THINK_TIME || 1), fixtureUsers: data.users.length, fixtureProducts: data.productIds.length, chatSubscriptionDelayMs: 200, ramp: __ENV.RAMP || '5m', hold: __ENV.HOLD || (mode === 'smoke' ? '30s' : '15m'), vus: Number(__ENV.VUS || (mode === 'smoke' ? 2 : 200)) },
     ...summary,
   }, null, 2) };
 }
