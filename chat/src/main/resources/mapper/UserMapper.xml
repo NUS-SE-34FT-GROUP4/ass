@@ -35,19 +35,6 @@
     <select id="selectAllWithRoles" resultMap="UserWithRolesResultMap">
         SELECT * FROM users
     </select>
-    <insert id="insert" parameterType="sg.edu.nus.iss.c2csectrade.chat.entity.User" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO users (username, display_name, password_hash, email, avatar_url, created_at, updated_at)
-        VALUES (#{username}, #{displayName}, #{passwordHash}, #{email}, #{avatarUrl}, #{createdAt}, #{updatedAt})
-    </insert>
-    <update id="update" parameterType="sg.edu.nus.iss.c2csectrade.chat.entity.User">
-        UPDATE users SET username=#{username}, display_name=#{displayName}, password_hash=#{passwordHash}, payment_password_hash=#{paymentPasswordHash}, email=#{email}, avatar_url=#{avatarUrl}, balance=#{balance}, updated_at=#{updatedAt} WHERE id=#{id}
-    </update>
-    <update id="updateEnabled">
-        UPDATE users SET enabled=#{enabled} WHERE id=#{id}
-    </update>
-    <delete id="deleteById" parameterType="long">
-        DELETE FROM users WHERE id=#{id}
-    </delete>
 
     <!-- helper select to load roles for user -->
     <select id="selectRolesByUserId" resultType="sg.edu.nus.iss.c2csectrade.chat.entity.Role">
