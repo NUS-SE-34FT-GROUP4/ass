@@ -1,13 +1,14 @@
 package sg.edu.nus.iss.c2csectrade.search.service;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import sg.edu.nus.iss.c2csectrade.event.Events;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -39,8 +40,8 @@ class ProductCatalogTest {
 
     @Test
     void asksWhichIdsStillExist() {
-        JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        when(jdbc.queryForList("SELECT id FROM pms_product WHERE id IN (?,?)", Long.class, 8L, 9L))
+        NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+        when(jdbc.queryForList(ProductCatalog.SELECT_EXISTING, Map.of("ids", List.of(8L, 9L)), Long.class))
                 .thenReturn(List.of(9L));
 
         assertThat(new ProductCatalog(jdbc).existingIds(List.of(8L, 9L))).containsExactly(9L);
@@ -48,7 +49,7 @@ class ProductCatalogTest {
 
     @Test
     void noIdsNeedNoQuery() {
-        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
 
         assertThat(new ProductCatalog(jdbc).existingIds(List.of())).isEmpty();
         verifyNoInteractions(jdbc);

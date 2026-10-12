@@ -1,15 +1,15 @@
 package sg.edu.nus.iss.c2csectrade.search.service;
 
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import sg.edu.nus.iss.c2csectrade.event.Events;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -36,9 +36,11 @@ public class ProductCatalog {
             rs.getObject("status", Integer.class),
             rs.getObject("created_at", LocalDateTime.class));
 
-    private final JdbcTemplate jdbc;
+    static final String SELECT_EXISTING = "SELECT id FROM pms_product WHERE id IN (:ids)";
 
-    public ProductCatalog(JdbcTemplate jdbc) {
+    private final NamedParameterJdbcTemplate jdbc;
+
+    public ProductCatalog(NamedParameterJdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
@@ -51,8 +53,6 @@ public class ProductCatalog {
         if (ids.isEmpty()) {
             return Set.of();
         }
-        String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
-        return new HashSet<>(jdbc.queryForList(
-                "SELECT id FROM pms_product WHERE id IN (" + placeholders + ")", Long.class, ids.toArray()));
+        return new HashSet<>(jdbc.queryForList(SELECT_EXISTING, Map.of("ids", ids), Long.class));
     }
 }
