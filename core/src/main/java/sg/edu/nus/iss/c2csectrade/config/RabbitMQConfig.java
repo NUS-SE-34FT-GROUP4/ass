@@ -42,6 +42,9 @@ public class RabbitMQConfig {
     public static final String PRODUCT_CREATED_ROUTING_KEY = "product.created";
     public static final String PRODUCT_UPDATED_ROUTING_KEY = "product.updated";
     public static final String PRODUCT_DELETED_ROUTING_KEY = "product.deleted";
+    // Consumed by Chat, which notifies the seller over WebSocket; Core holds
+    // no privilege on chat_message, so it publishes instead of writing.
+    public static final String PRODUCT_DELISTED_ROUTING_KEY = "product.delisted";
     // One queue for all three keys so Search applies changes in the order they were made
     public static final String SEARCH_PRODUCT_QUEUE = "search.product.queue";
     public static final String PRODUCT_STOCK_LOW_QUEUE = "product.stock.low.queue";

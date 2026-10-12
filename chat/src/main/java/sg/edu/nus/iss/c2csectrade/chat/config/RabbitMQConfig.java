@@ -58,4 +58,29 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(chatFanoutQueue())
                 .to(chatFanoutExchange());
     }
+
+    // ============ Product delisted events (published by Core) ============
+    public static final String PRODUCT_EXCHANGE = "product.exchange";
+    public static final String PRODUCT_DELISTED_QUEUE = "chat.product.delisted.queue";
+    public static final String PRODUCT_DELISTED_ROUTING_KEY = "product.delisted";
+
+    // Declared identically in Core; declaring it here too lets Chat start
+    // and bind before Core has ever run (AMQP re-declare is a no-op when the
+    // parameters match).
+    @Bean
+    public TopicExchange productExchange() {
+        return new TopicExchange(PRODUCT_EXCHANGE, true, false);
+    }
+
+    @Bean
+    public Queue productDelistedQueue() {
+        return QueueBuilder.durable(PRODUCT_DELISTED_QUEUE).build();
+    }
+
+    @Bean
+    public Binding productDelistedBinding() {
+        return BindingBuilder.bind(productDelistedQueue())
+                .to(productExchange())
+                .with(PRODUCT_DELISTED_ROUTING_KEY);
+    }
 }

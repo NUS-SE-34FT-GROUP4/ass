@@ -113,6 +113,22 @@ public class EventPublisher {
     }
 
     /**
+     * Publish product delisted event (consumed by Chat to notify the seller)
+     */
+    public void publishProductDelisted(Events.ProductDelistedEvent event) {
+        try {
+            rabbitTemplate.convertAndSend(
+                RabbitMQConfig.PRODUCT_EXCHANGE,
+                RabbitMQConfig.PRODUCT_DELISTED_ROUTING_KEY,
+                event
+            );
+            System.out.println("Published product.delisted: " + event.getProductId());
+        } catch (Exception e) {
+            System.err.println("Failed to publish product.delisted: " + e.getMessage());
+        }
+    }
+
+    /**
      * Publish product stock low event
      */
     public void publishProductStockLow(Events.ProductStockLowEvent event) {

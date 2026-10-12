@@ -263,7 +263,7 @@ const sendSystemMessageToAll = async () => {
   sending.value = true;
   try {
     const token = localStorage.getItem('jwt_token');
-    const response = await axios.post('/api/message/broadcast', {
+    const response = await axios.post('/api/chat/broadcast', {
       message: systemMessage.value
     }, {
       headers: { Authorization: `Bearer ${token}` }
