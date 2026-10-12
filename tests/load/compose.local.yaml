@@ -60,14 +60,47 @@ services:
     env_file: local.env
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_AMQP: INFO
-    ports: ['127.0.0.1:18080:8080']
+
     depends_on:
       mysql: {condition: service_healthy}
       rabbitmq: {condition: service_healthy}
       elasticsearch: {condition: service_healthy}
       redis: {condition: service_started}
       minio: {condition: service_started}
+  search:
+    image: ass-wp10-search:local
+    build:
+      context: ../..
+      dockerfile: tests/load/Dockerfile.backend
+      args: {MODULE: search}
+    environment:
+      SERVER_PORT: 8080
+      SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
+      SPRING_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      elasticsearch: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+  chat:
+    image: ass-wp10-chat:local
+    build:
+      context: ../..
+      dockerfile: tests/load/Dockerfile.backend
+      args: {MODULE: chat}
+    env_file: local.env
+    environment:
+      SERVER_PORT: 8080
+      SPRING_DATASOURCE_PASSWORD: tradepass
+      SPRING_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      mysql: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+  gateway:
+    image: nginx:1.28-alpine
+    ports: ['127.0.0.1:18080:8080']
+    volumes: ['./gateway.conf:/etc/nginx/conf.d/default.conf:ro']
+    depends_on: [backend, search, chat]
   node:
     image: node:22-alpine
     profiles: [tools]
