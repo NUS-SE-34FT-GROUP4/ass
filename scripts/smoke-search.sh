@@ -8,7 +8,9 @@
 # Search service at SEARCH_URL (default BASE_URL, as behind the load
 # balancer; locally the Search service listens on http://localhost:8081).
 #
-# Read-only checks (health, search endpoint) always run. The write checks
+# Read-only checks (health, search endpoint) always run; set CHECK_HEALTH=false
+# behind CloudFront, which does not route /actuator (the CD workflow has already
+# waited for the load balancer health checks). The write checks
 # (create, update, delete) need a signed-in user:
 #   SMOKE_TOKEN       a JWT to use as is, or else
 #   SMOKE_USER        account to sign in with (default smoke_search; registered
@@ -30,6 +32,7 @@ SEARCH_URL="${SEARCH_URL%/}"
 SMOKE_USER="${SMOKE_USER:-smoke_search}"
 SMOKE_PASSWORD="${SMOKE_PASSWORD:-Smoke#Search1}"
 REDIS_CONTAINER="${REDIS_CONTAINER:-c2csectrade-redis}"
+CHECK_HEALTH="${CHECK_HEALTH:-true}"
 INDEX_TIMEOUT=20   # seconds to wait for an event to reach the index
 
 MARKER="smoke$(date +%s)$RANDOM"
@@ -115,13 +118,15 @@ trap cleanup EXIT
 echo "Search smoke test: Core $BASE_URL, Search $SEARCH_URL (marker: $MARKER)"
 
 echo "Read-only checks"
-for url in $(printf '%s\n' "$BASE_URL" "$SEARCH_URL" | sort -u); do
-    if curl -sf "$url/actuator/health" | jq -e '.status == "UP"' > /dev/null; then
-        pass "health is UP at $url"
-    else
-        fail "health is not UP at $url"
-    fi
-done
+if [ "$CHECK_HEALTH" = true ]; then
+    for url in $(printf '%s\n' "$BASE_URL" "$SEARCH_URL" | sort -u); do
+        if curl -sf "$url/actuator/health" | jq -e '.status == "UP"' > /dev/null; then
+            pass "health is UP at $url"
+        else
+            fail "health is not UP at $url"
+        fi
+    done
+fi
 if search "keyword=$MARKER" | jq -e 'type == "array" and length == 0' > /dev/null; then
     pass "search answers with an empty list for an unknown word"
 else
