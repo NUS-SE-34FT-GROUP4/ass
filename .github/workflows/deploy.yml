@@ -1,0 +1,85 @@
+# Deploy: publishes the frontend to S3 and invalidates CloudFront after each
+# merge to main. CI is required by branch protection, so main is always green
+# when this runs; there is intentionally no CI gate inside this workflow.
+#
+# Authentication is OIDC only: the job assumes the Terraform-managed role
+# (infra/terraform/env/github.tf) which trusts the `staging` GitHub
+# Environment. No access keys are stored anywhere.
+#
+# Required configuration on the `staging` Environment (values from
+# `terraform output` in infra/terraform/env):
+#   secret AWS_ROLE_ARN     <- github_deploy_role_arn
+#   var    FRONTEND_BUCKET  <- frontend_bucket
+#   var    DISTRIBUTION_ID  <- cloudfront_distribution_id
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write # OIDC token for assuming the deploy role
+  contents: read
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false # never leave a half-synced bucket
+
+jobs:
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same Node major as CI and the frontend image (node:18-alpine)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci --no-audit --no-fund
+        working-directory: frontend
+
+      # CloudFront serves /api and /ws from the same origin as the frontend,
+      # so the build keeps the relative defaults (no VUE_APP_* overrides).
+      - name: Build
+        run: npm run build
+        working-directory: frontend
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-southeast-1
+
+      # Vue CLI fingerprints everything under css/, js/, img/ and fonts/, so
+      # those get an immutable year-long cache; index.html and other root
+      # files are revalidated every request. Excluded paths are also excluded
+      # from --delete, so the two passes never remove each other's objects.
+      - name: Upload fingerprinted assets
+        run: |
+          aws s3 sync dist/ "s3://${{ vars.FRONTEND_BUCKET }}" \
+            --delete \
+            --exclude "*" \
+            --include "css/*" --include "js/*" --include "img/*" --include "fonts/*" \
+            --cache-control "public,max-age=31536000,immutable"
+        working-directory: frontend
+
+      - name: Upload index and root files
+        run: |
+          aws s3 sync dist/ "s3://${{ vars.FRONTEND_BUCKET }}" \
+            --delete \
+            --exclude "css/*" --exclude "js/*" --exclude "img/*" --exclude "fonts/*" \
+            --cache-control "no-cache"
+        working-directory: frontend
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.DISTRIBUTION_ID }}" \
+            --paths "/*"
