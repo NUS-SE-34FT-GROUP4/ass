@@ -161,6 +161,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    secrets: inherit
     with:
       environment: staging
       image_tag: ${{ needs.release.outputs.tag }}
@@ -174,6 +175,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    secrets: inherit
     with:
       environment: production
       image_tag: ${{ needs.release.outputs.tag }}

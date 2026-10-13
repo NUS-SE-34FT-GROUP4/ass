@@ -179,6 +179,17 @@ variable "github_repository" {
   default     = "NUS-SE-34FT-GROUP4/ass"
 }
 
+variable "github_repository_ids" {
+  description = <<-EOT
+    The same repository as owner@<owner id>/name@<repository id>. The repository
+    uses GitHub's immutable OIDC subject, so tokens name it this way
+    (repo:NUS-SE-34FT-GROUP4@326786279/ass@1408491341:environment:staging);
+    see gh api repos/<owner>/<name>/actions/oidc/customization/sub.
+  EOT
+  type        = string
+  default     = "NUS-SE-34FT-GROUP4@326786279/ass@1408491341"
+}
+
 variable "db_service_users" {
   description = <<-EOT
     Services that log in to MySQL as their own user (core_svc, search_svc,
