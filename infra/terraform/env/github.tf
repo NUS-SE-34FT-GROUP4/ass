@@ -7,13 +7,17 @@ data "aws_iam_openid_connect_provider" "github" {
   url = "https://token.actions.githubusercontent.com"
 }
 
+# Tokens name the repository by IDs (immutable subject, on for this
+# repository); the plain owner/name form is kept in case it is turned off.
 locals {
-  github_subjects = local.is_prod ? [
-    "repo:${var.github_repository}:environment:production",
-    ] : [
-    "repo:${var.github_repository}:ref:refs/heads/main",
-    "repo:${var.github_repository}:environment:staging",
-  ]
+  github_subjects = flatten([
+    for repo in [var.github_repository, var.github_repository_ids] : local.is_prod ? [
+      "repo:${repo}:environment:production",
+      ] : [
+      "repo:${repo}:ref:refs/heads/main",
+      "repo:${repo}:environment:staging",
+    ]
+  ])
 }
 
 data "aws_iam_policy_document" "github_assume" {

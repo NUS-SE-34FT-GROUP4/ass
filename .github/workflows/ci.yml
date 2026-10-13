@@ -319,5 +319,8 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    # A called workflow sees no secrets unless they are passed down, not even
+    # the AWS_ROLE_ARN of the Environment its job runs in
+    secrets: inherit
     with:
       image_tag: ${{ github.sha }}
