@@ -1,0 +1,172 @@
+# Continuous delivery: after CI passes on main, the commit's images go to
+# ECR and through staging to production.
+#
+#   images      build core, search and chat (the same Dockerfile CI built and
+#               scanned for this commit) and push them to ECR, tagged with
+#               the commit SHA; tags are immutable, so a SHA is built once
+#   frontend    build the Vue app once, for both environments
+#   staging     deploy the images and the frontend, then smoke-test
+#   production  the same, after a reviewer of the production Environment
+#               approves; ECS rolls a release back by itself if its tasks
+#               never become healthy (deployment circuit breaker)
+#
+# Rollback: run this workflow by hand with image_tag set to an earlier SHA.
+# It skips the build and deploys that SHA's images (not its frontend).
+#
+# Settings, on each GitHub Environment (staging is set up; production needs
+# the same, plus required reviewers):
+#   secret    AWS_ROLE_ARN                the environment's github_deploy_role_arn
+#   variables AWS_REGION, ECS_CLUSTER, APP_URL, FRONTEND_BUCKET, CLOUDFRONT_DISTRIBUTION_ID
+#             (all from `terraform output`)
+# and the repository variable PRODUCTION_DEPLOY = 'true' once the production
+# Environment exists with required reviewers. Until then the run stops after
+# staging: a workflow that names a missing Environment creates it unprotected.
+
+name: CD
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Commit SHA to deploy again (rollback). Empty builds and deploys the head of main.
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  id-token: write
+
+# One release at a time; a newer one waits instead of cancelling a deployment
+concurrency:
+  group: cd
+  cancel-in-progress: false
+
+# Explicit bash runs with -o pipefail, so a failure inside a pipe fails the step
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    name: release
+    # Only a CI run for a push to main, not one for a pull request
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      build: ${{ steps.tag.outputs.build }}
+    steps:
+      - id: tag
+        env:
+          ROLLBACK_TAG: ${{ inputs.image_tag }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          if [ -n "$ROLLBACK_TAG" ]; then
+            echo "tag=$ROLLBACK_TAG" >> "$GITHUB_OUTPUT"
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "Redeploying images $ROLLBACK_TAG (rollback)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "tag=$RUN_SHA" >> "$GITHUB_OUTPUT"
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            echo "Releasing $RUN_SHA" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  images:
+    name: images (${{ matrix.service }})
+    needs: release
+    if: needs.release.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The staging role pushes the images; production deploys the same ones
+    environment: staging
+    strategy:
+      matrix:
+        service: [core, search, chat]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/c2csectrade/${{ matrix.service }}:${{ needs.release.outputs.tag }}
+          REPOSITORY: c2csectrade/${{ matrix.service }}
+          TAG: ${{ needs.release.outputs.tag }}
+        run: |
+          # A re-run finds the image already there; tags are immutable
+          if aws ecr describe-images --repository-name "$REPOSITORY" --image-ids imageTag="$TAG" > /dev/null 2>&1; then
+            echo "$IMAGE already in ECR"
+            exit 0
+          fi
+          docker build --build-arg MODULE=${{ matrix.service }} --tag "$IMAGE" .
+          docker push "$IMAGE"
+          echo "Pushed $IMAGE" >> "$GITHUB_STEP_SUMMARY"
+
+  frontend:
+    name: frontend
+    needs: release
+    if: needs.release.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+
+      # Same Node major as CI and the frontend image
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # The app calls /api and /ws on its own origin, which CloudFront sends
+      # to the load balancer, so the build needs no environment settings
+      - name: Build
+        working-directory: frontend
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 7
+
+  staging:
+    needs: [release, images, frontend]
+    # Also after a rollback, where images and frontend are skipped
+    if: >-
+      always() && needs.release.result == 'success' &&
+      contains(fromJSON('["success", "skipped"]'), needs.images.result) &&
+      contains(fromJSON('["success", "skipped"]'), needs.frontend.result)
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: staging
+      image_tag: ${{ needs.release.outputs.tag }}
+      frontend: ${{ needs.release.outputs.build == 'true' }}
+
+  production:
+    needs: [release, staging]
+    if: >-
+      always() && needs.staging.result == 'success' && vars.PRODUCTION_DEPLOY == 'true'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: production
+      image_tag: ${{ needs.release.outputs.tag }}
+      frontend: ${{ needs.release.outputs.build == 'true' }}

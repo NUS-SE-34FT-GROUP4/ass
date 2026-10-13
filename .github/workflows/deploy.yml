@@ -1,0 +1,124 @@
+# Deploys one release to one environment; called by cd.yml for staging, then
+# production. Everything that touches AWS is a single job, so a protected
+# Environment asks for one approval per release, not one per step.
+#
+#   deploy  new task definition revisions for core, search and chat, wait
+#           for each rollout (scripts/ecs-deploy.sh fails if the circuit
+#           breaker rolls one back), then upload the frontend
+#   smoke   read-only checks through CloudFront: the frontend, Core and Search
+
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      image_tag:
+        type: string
+        required: true
+      frontend:
+        description: Upload the frontend built in this run (false on a rollback)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+# Explicit bash runs with -o pipefail, so a failure inside a pipe fails the step
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ vars.APP_URL }}
+    outputs:
+      app_url: ${{ vars.APP_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Check the images exist
+        env:
+          TAG: ${{ inputs.image_tag }}
+        run: |
+          for service in core search chat; do
+            aws ecr describe-images --repository-name "c2csectrade/$service" --image-ids imageTag="$TAG" \
+              --query 'imageDetails[0].imageDigest' --output text \
+              | sed "s|^|$service:$TAG |"
+          done
+
+      # One ECS service per module (infra/terraform/env/ecs.tf)
+      - name: Deploy services
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          CLUSTER: ${{ vars.ECS_CLUSTER }}
+        run: |
+          status=0
+          scripts/ecs-deploy.sh "$CLUSTER" "${{ inputs.image_tag }}" \
+            core search chat 2>&1 | tee deploy.log || status=$?
+          {
+            echo "## ${{ inputs.environment }}: ${{ inputs.image_tag }}"
+            echo '```'
+            cat deploy.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
+      - uses: actions/download-artifact@v4
+        if: inputs.frontend
+        with:
+          name: frontend-dist
+          path: dist
+
+      # Hashed bundles are cached for good; index.html and the rest are
+      # revalidated, and CloudFront drops its copies
+      - name: Upload frontend
+        if: inputs.frontend
+        env:
+          BUCKET: ${{ vars.FRONTEND_BUCKET }}
+          DISTRIBUTION: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          aws s3 sync dist "s3://$BUCKET" --delete --exclude 'js/*' --exclude 'css/*' \
+            --cache-control 'no-cache'
+          aws s3 sync dist "s3://$BUCKET" --exclude '*' --include 'js/*' --include 'css/*' \
+            --cache-control 'public, max-age=31536000, immutable'
+          aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION" --paths '/*' \
+            --query Invalidation.Id --output text
+
+  smoke:
+    name: smoke
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      APP_URL: ${{ needs.deploy.outputs.app_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Frontend
+        run: curl -sSf "$APP_URL/" | grep -q '<div id="app"'
+
+      - name: Core
+        run: curl -sSf "$APP_URL/api/products" | jq -e 'type == "array"' > /dev/null
+
+      # Health is not reachable through CloudFront; the deploy job already
+      # waited for the load balancer health checks. Without a signed-in user
+      # the write checks are skipped.
+      - name: Search
+        run: CHECK_HEALTH=false scripts/smoke-search.sh "$APP_URL"
