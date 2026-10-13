@@ -42,10 +42,16 @@ public class RabbitMQConfig {
         return converter;
     }
 
+    /**
+     * Single active consumer: with several Search tasks, RabbitMQ delivers to
+     * one of them only and fails over to another if it goes away. Spread
+     * across tasks, an update could be indexed after the delete that followed
+     * it and bring the product back (#24).
+     */
     @Bean
     public Declarables productEventTopology() {
         TopicExchange exchange = new TopicExchange(PRODUCT_EXCHANGE, true, false);
-        Queue queue = QueueBuilder.durable(SEARCH_PRODUCT_QUEUE).build();
+        Queue queue = QueueBuilder.durable(SEARCH_PRODUCT_QUEUE).singleActiveConsumer().build();
         List<Declarable> declarables = new ArrayList<>(List.of(exchange, queue));
         for (String key : ROUTING_KEYS) {
             declarables.add(BindingBuilder.bind(queue).to(exchange).with(key));
