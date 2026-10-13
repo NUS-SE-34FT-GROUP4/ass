@@ -25,7 +25,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 # Explicit bash runs with -o pipefail, so a failure inside a pipe fails the step
 defaults:
@@ -40,18 +39,26 @@ jobs:
     environment:
       name: ${{ inputs.environment }}
       url: ${{ vars.APP_URL }}
+    permissions:
+      contents: read
+      id-token: write
+    # One deployment per environment at a time; a newer release waits
+    # instead of cancelling one halfway
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
     outputs:
       app_url: ${{ vars.APP_URL }}
     steps:
       - uses: actions/checkout@v4
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
 
       - id: ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
 
       - name: Check the images exist
         env:

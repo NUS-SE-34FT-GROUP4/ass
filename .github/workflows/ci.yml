@@ -12,6 +12,8 @@
 #   images    builds the core, search and chat images from the shared
 #             Dockerfile and scans each one with Trivy (OS packages, the
 #             application jar and secrets); fails on CRITICAL the same way
+#   cd        on a push to main only, once all of the above pass: cd.yml
+#             releases the commit through staging to production
 #
 # Gitleaks and Trivy are downloaded as release binaries checked against
 # pinned SHA-256 sums rather than through third-party actions.
@@ -27,9 +29,11 @@ on:
 permissions:
   contents: read
 
+# A newer push cancels a pull request's run, but never a run on main, which
+# may be deploying
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 env:
   GITLEAKS_VERSION: 8.30.1
@@ -305,3 +309,15 @@ jobs:
           name: trivy-image-report-${{ matrix.service }}
           path: trivy-image-report.txt
           retention-days: 14
+
+  # Every check above passed on a push to main: release this commit
+  cd:
+    name: cd
+    needs: [backend, load-scripts, frontend, gitleaks, trivy, images]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/cd.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      image_tag: ${{ github.sha }}
