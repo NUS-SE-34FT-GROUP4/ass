@@ -1,0 +1,17 @@
+# Runs each service as its own database user (core_svc, search_svc, chat_svc)
+# instead of the shared tradeuser, as on AWS. Use it through
+# scripts/use-service-db-users.sh, which creates the users with
+# infra/db/grants.sql and passes the passwords in; none is stored here.
+services:
+  backend:
+    environment:
+      SPRING_DATASOURCE_USERNAME: core_svc
+      SPRING_DATASOURCE_PASSWORD: ${CORE_SVC_PASSWORD:?Run scripts/use-service-db-users.sh}
+  search:
+    environment:
+      SPRING_DATASOURCE_USERNAME: search_svc
+      SPRING_DATASOURCE_PASSWORD: ${SEARCH_SVC_PASSWORD:?Run scripts/use-service-db-users.sh}
+  chat:
+    environment:
+      SPRING_DATASOURCE_USERNAME: chat_svc
+      SPRING_DATASOURCE_PASSWORD: ${CHAT_SVC_PASSWORD:?Run scripts/use-service-db-users.sh}
