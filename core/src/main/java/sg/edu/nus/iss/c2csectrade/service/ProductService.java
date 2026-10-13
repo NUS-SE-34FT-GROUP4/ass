@@ -277,6 +277,13 @@ public class ProductService {
         if (product != null) {
             product.setStatus(0);
             productMapper.update(product);
+
+            // Sync to the search index, which only returns products on sale
+            try {
+                eventPublisher.publishEvent(new ProductUpdatedEvent(this, product));
+            } catch (Exception e) {
+                System.err.println("Failed to publish ProductUpdatedEvent: " + e.getMessage());
+            }
         }
     }
 
