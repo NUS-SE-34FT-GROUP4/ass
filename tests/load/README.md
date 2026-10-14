@@ -76,9 +76,10 @@ Search-only burst (Core/Chat fixed at one task each):
 k6 run -e BASE_URL=https://STAGING_HOST -e MODE=search -e FIXTURES=./generated/fixtures.json -e DEPLOYMENT=search-scaling tests/load/marketplace.js
 ```
 
-Current search route is `/api/products/search`. Once extracted, set
-`SEARCH_PATH=/api/search/...` to the verified route; do not assume the proposed
-route already exists. Thresholds: read median <1s, read P95 <2s, HTTP and business
+Current public search route is `/api/products?keyword=...`: Core delegates keyword
+searches to Search. The old `/api/products/search` route no longer exists after
+extraction. `SEARCH_PATH` overrides the path only when another deployment has a
+verified alternative route. Thresholds: read median <1s, read P95 <2s, HTTP and business
 error rates <1%. HTTP 200 with `success:false` is a business failure. Chat failures
 also contribute to business errors. These are request/message-level error rates;
 operation counters provide the workload breakdown. Search returns an array;

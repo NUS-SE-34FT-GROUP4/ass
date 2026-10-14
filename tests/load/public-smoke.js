@@ -11,7 +11,7 @@ export const options = {
 export default function () {
   for (const [name, path] of [
     ['browse', '/api/products'],
-    ['search', `${__ENV.SEARCH_PATH || '/api/products/search'}?keyword=${encodeURIComponent(__ENV.KEYWORD || 'book')}&page=0&size=20`],
+    ['search', `${__ENV.SEARCH_PATH || '/api/products'}?keyword=${encodeURIComponent(__ENV.KEYWORD || 'book')}&page=0&size=20`],
   ]) {
     const r = http.get(base + path, { tags: { name }, timeout: '10s' });
     let body;

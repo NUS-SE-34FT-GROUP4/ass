@@ -48,5 +48,5 @@ for(const [name,roll] of [['browse',.1],['search',.4],['detail_recommendation',.
 const failure=context('mixed',true,.87);failure.c.iteration();assert.deepEqual(failure.metrics.business_errors,[true]);assert.equal(failure.calls.length,1);checks++;
 const broken=context('mixed');broken.c.__ENV.ENABLE_WRITES='false';assert.throws(()=>broken.c.setup(),/ENABLE_WRITES/);checks++;
 const smoke=context('smoke',false,.98);smoke.c.iteration();assert.ok(smoke.calls.every(r=>r.method==='GET'));checks++;
-const search=context('search',false,.98);search.c.iteration();assert.equal(search.calls.length,1);assert.match(search.calls[0].url,/products\/search/);checks++;
+const search=context('search',false,.98);search.c.iteration();assert.equal(search.calls.length,1);assert.match(search.calls[0].url,/\/api\/products\?keyword=/);checks++;
 console.log(`${checks} offline behavior checks passed (mock modules; no network or server performance tested).`);
