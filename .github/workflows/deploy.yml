@@ -22,6 +22,11 @@ on:
         description: Upload the frontend built in this run (false on a rollback)
         type: boolean
         default: true
+    # cd.yml passes this down with secrets: inherit; required so a missing
+    # secret fails at job start instead of as an empty configure-aws-credentials input
+    secrets:
+      AWS_ROLE_ARN:
+        required: true
 
 permissions:
   contents: read

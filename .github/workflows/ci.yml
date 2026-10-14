@@ -319,5 +319,8 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    # Without this the called workflow's jobs see an empty secrets context:
+    # the Environment's AWS_ROLE_ARN never reaches configure-aws-credentials
+    secrets: inherit
     with:
       image_tag: ${{ github.sha }}
