@@ -31,16 +31,17 @@ resource "aws_iam_group_policy_attachment" "cloudwatch_read" {
 
 # Until a member has signed in with MFA, the only things they can do are set
 # their own password and register their own MFA device (AWS's documented
-# "force MFA" pattern).
+# "force MFA" pattern). They reach it from the account menu (top right) ->
+# Security credentials; IAM -> Users stays closed until MFA is on.
 data "aws_iam_policy_document" "require_mfa" {
   statement {
     sid = "ManageOwnPasswordAndMfa"
     actions = [
       "iam:ChangePassword",
       "iam:GetUser",
-      "iam:GetAccountPasswordPolicy",
       "iam:CreateVirtualMFADevice",
       "iam:EnableMFADevice",
+      "iam:GetMFADevice",
       "iam:ListMFADevices",
       "iam:ResyncMFADevice",
     ]
@@ -48,6 +49,13 @@ data "aws_iam_policy_document" "require_mfa" {
       "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/$${aws:username}",
       "arn:aws:iam::${data.aws_caller_identity.current.account_id}:mfa/*",
     ]
+  }
+
+  # These two have no resource-level permissions, so they need "*".
+  statement {
+    sid       = "ViewAccountMfaSettings"
+    actions   = ["iam:GetAccountPasswordPolicy", "iam:ListVirtualMFADevices"]
+    resources = ["*"]
   }
 
   statement {
@@ -59,7 +67,9 @@ data "aws_iam_policy_document" "require_mfa" {
       "iam:GetAccountPasswordPolicy",
       "iam:CreateVirtualMFADevice",
       "iam:EnableMFADevice",
+      "iam:GetMFADevice",
       "iam:ListMFADevices",
+      "iam:ListVirtualMFADevices",
       "iam:ResyncMFADevice",
       "sts:GetSessionToken",
     ]
