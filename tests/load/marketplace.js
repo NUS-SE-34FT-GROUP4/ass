@@ -67,7 +67,7 @@ export default function () {
   const user = data.users[__VU - 1];
   const id = data.productIds[Math.floor(Math.random() * data.productIds.length)];
   const keyword = encodeURIComponent(data.keywords[Math.floor(Math.random() * data.keywords.length)]);
-  const search = () => request('GET', `${__ENV.SEARCH_PATH || '/api/products/search'}?keyword=${keyword}&page=0&size=20`, null, undefined, 'search', Array.isArray);
+  const search = () => request('GET', `${__ENV.SEARCH_PATH || '/api/products'}?keyword=${keyword}&page=0&size=20`, null, undefined, 'search', Array.isArray);
   // Percentages are business-operation probabilities, not HTTP-request ratios.
   const roll = mode === 'search' ? 0.4 : Math.random();
   if (roll < 0.3) {

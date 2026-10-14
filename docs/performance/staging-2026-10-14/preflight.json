@@ -1,0 +1,41 @@
+{
+  "timestamp": "2026-10-14T14:16:00.689402+00:00",
+  "base": "https://dxjzlpbh4ve2y.cloudfront.net",
+  "scope": "Four sequential anonymous GET requests; not a load or scaling test",
+  "results": [
+    {
+      "path": "/",
+      "status": 200,
+      "elapsed_ms": 186.49,
+      "bytes": 606,
+      "items": null,
+      "content_type": "text/html",
+      "cache": "Miss from cloudfront",
+      "age": null
+    },
+    {
+      "path": "/api/products",
+      "status": 200,
+      "elapsed_ms": 134.81,
+      "bytes": 536,
+      "items": 1,
+      "content_type": "application/json;charset=UTF-8",
+      "cache": "Miss from cloudfront",
+      "age": null
+    },
+    {
+      "path": "/api/products/search?keyword=book&page=0&size=20",
+      "error": "HTTP Error 500: "
+    },
+    {
+      "path": "/actuator/health/liveness",
+      "status": 200,
+      "elapsed_ms": 60.93,
+      "bytes": 606,
+      "items": null,
+      "content_type": "text/html",
+      "cache": "Hit from cloudfront",
+      "age": null
+    }
+  ]
+}
