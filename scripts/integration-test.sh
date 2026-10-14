@@ -20,9 +20,24 @@
 #   REDIS_CONTAINER                  container to read login captchas from
 #                                    (default c2csectrade-redis)
 #   ADMIN_USER, ADMIN_PASSWORD       default admin / admin123 (seeded by init.sql)
+#   SELLER_TOKEN, BUYER_TOKEN,       JWTs to use as they are instead of signing in;
+#   ADMIN_TOKEN                      needed where the captcha cannot be read from
+#                                    Redis. Seller and buyer must be two different
+#                                    ordinary accounts; ADMIN_TOKEN an administrator.
+#   SKIP_HEALTH=1                    skip the /actuator/health checks (not exposed
+#                                    behind the load balancer)
+#
+# On staging every service sits behind one address. Sign in on the site as each
+# user and copy localStorage "jwt_token" from the browser, then:
+#   url=https://<staging address>
+#   CORE_URL=$url SEARCH_URL=$url CHAT_URL=$url GATEWAY_URL=$url SKIP_HEALTH=1 \
+#   SELLER_TOKEN=... BUYER_TOKEN=... ADMIN_TOKEN=... scripts/integration-test.sh
+# The buyer's payment password is set to 135790 if it has none; a buyer with a
+# different one fails the payment checks. Delisting changes the test product only.
 #
 # Run scripts/use-service-db-users.sh first to test with the per-service
-# database users. Exits non-zero if any check fails. Needs curl, jq and docker.
+# database users. Exits non-zero if any check fails. Needs curl and jq, and
+# docker unless all three tokens are given.
 
 set -uo pipefail
 
@@ -41,7 +56,9 @@ MARKER="it$(date +%s)$RANDOM"
 PASSED=0
 FAILED=0
 PRODUCT=""
-SELLER_TOKEN=""
+SELLER_TOKEN="${SELLER_TOKEN:-}"
+BUYER_TOKEN="${BUYER_TOKEN:-}"
+ADMIN_TOKEN="${ADMIN_TOKEN:-}"
 
 pass() { echo "  PASS  $1"; PASSED=$((PASSED + 1)); }
 fail() { echo "  FAIL  $1"; FAILED=$((FAILED + 1)); }
@@ -89,6 +106,14 @@ register() {
         '{username: $u, displayName: $u, email: ($u + "@example.com"),
           password: $p, captchaId: $i, captchaCode: $c}')"
     curl -sf -o /dev/null -X POST "$CORE_URL/api/auth/register" -H 'Content-Type: application/json' -d "$body"
+}
+
+# jwt_subject <token>: prints the username the token was issued to
+jwt_subject() {
+    local payload
+    payload="$(cut -d. -f2 <<< "$1" | tr '_-' '/+')"
+    while [ $(( ${#payload} % 4 )) -ne 0 ]; do payload="$payload="; done
+    base64 -d <<< "$payload" 2> /dev/null | jq -r '.sub // empty'
 }
 
 # Signs in, registering the account first if it does not exist yet
@@ -142,16 +167,20 @@ trap cleanup EXIT
 echo "Integration test: Core $CORE_URL, Search $SEARCH_URL, Chat $CHAT_URL (marker: $MARKER)"
 
 echo "Services"
-for url in "$CORE_URL" "$SEARCH_URL" "$CHAT_URL"; do
-    check "health is UP at $url" eval "curl -sf '$url/actuator/health' | jq -e '.status == \"UP\"' > /dev/null"
-done
+if [ "${SKIP_HEALTH:-}" = 1 ]; then
+    echo "  skipped: SKIP_HEALTH=1"
+else
+    for url in "$CORE_URL" "$SEARCH_URL" "$CHAT_URL"; do
+        check "health is UP at $url" eval "curl -sf '$url/actuator/health' | jq -e '.status == \"UP\"' > /dev/null"
+    done
+fi
 
 echo "Sign-in"
 SELLER="it_seller"
 BUYER="it_buyer"
-SELLER_TOKEN="$(token_for "$SELLER")"
-BUYER_TOKEN="$(token_for "$BUYER")"
-ADMIN_TOKEN="$(login "$ADMIN_USER" "$ADMIN_PASSWORD" || true)"
+if [ -n "$SELLER_TOKEN" ]; then SELLER="$(jwt_subject "$SELLER_TOKEN")"; else SELLER_TOKEN="$(token_for "$SELLER")"; fi
+[ -n "$BUYER_TOKEN" ] || BUYER_TOKEN="$(token_for "$BUYER")"
+[ -n "$ADMIN_TOKEN" ] || ADMIN_TOKEN="$(login "$ADMIN_USER" "$ADMIN_PASSWORD" || true)"
 check "seller, buyer and administrator can sign in" test -n "$SELLER_TOKEN" -a -n "$BUYER_TOKEN" -a -n "$ADMIN_TOKEN"
 if [ -z "$SELLER_TOKEN" ] || [ -z "$BUYER_TOKEN" ] || [ -z "$ADMIN_TOKEN" ]; then
     echo "$PASSED passed, $((FAILED)) failed; cannot continue without tokens"
