@@ -23,6 +23,11 @@
     <select id="selectById" resultMap="UserResultMap">
         SELECT * FROM users WHERE id = #{id}
     </select>
+    <!-- Sellers for a whole page of products in one query -->
+    <select id="selectByIds" resultMap="UserResultMap">
+        SELECT * FROM users WHERE id IN
+        <foreach item="id" collection="ids" open="(" separator="," close=")">#{id}</foreach>
+    </select>
     <select id="selectByUsername" resultMap="UserResultMap">
         SELECT * FROM users WHERE username = #{username}
     </select>

@@ -272,66 +272,15 @@ const getCategoryFilter = () => {
 };
 
 // Pagination computed properties
-const totalProducts = computed(() => products.value.length);
+// The server pages and sorts; it reports how many products match in X-Total-Count
+const totalProducts = ref(0);
 
 const totalPages = computed(() => {
   return Math.ceil(totalProducts.value / pageSize.value);
 });
 
-// Sorted product list
-const sortedProducts = computed(() => {
-  const productsCopy = [...products.value];
-
-  switch (sortBy.value) {
-    case 'price-asc':
-      // Price: low to high
-      return productsCopy.sort((a, b) => {
-        const priceA = parseFloat(a.price) || 0;
-        const priceB = parseFloat(b.price) || 0;
-        return priceA - priceB;
-      });
-
-    case 'price-desc':
-      // Price: high to low
-      return productsCopy.sort((a, b) => {
-        const priceA = parseFloat(a.price) || 0;
-        const priceB = parseFloat(b.price) || 0;
-        return priceB - priceA;
-      });
-
-    case 'time-desc':
-      // Newest first (creation time, newest to oldest)
-      return productsCopy.sort((a, b) => {
-        const timeA = new Date(a.createdAt || 0).getTime();
-        const timeB = new Date(b.createdAt || 0).getTime();
-        return timeB - timeA;
-      });
-
-    case 'time-asc':
-      // Oldest first (creation time, oldest to newest)
-      return productsCopy.sort((a, b) => {
-        const timeA = new Date(a.createdAt || 0).getTime();
-        const timeB = new Date(b.createdAt || 0).getTime();
-        return timeA - timeB;
-      });
-
-    case 'default':
-    default:
-      // Default sort: combines recency with other factors
-      return productsCopy.sort((a, b) => {
-        // Favour newer products while weighing other factors
-        const timeA = new Date(a.createdAt || 0).getTime();
-        const timeB = new Date(b.createdAt || 0).getTime();
-        return timeB - timeA;
-      });
-  }
-});
-
-const displayedProducts = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  const end = start + pageSize.value;
-  return sortedProducts.value.slice(start, end);
-});
+// The current page, already sorted by the server
+const displayedProducts = computed(() => products.value);
 
 // Visible page numbers
 const displayedPageNumbers = computed(() => {
@@ -364,13 +313,18 @@ const fetchProducts = async () => {
       maxPrice: filters.value.maxPrice || undefined,
       conditionLevel: filters.value.conditionLevel || undefined,
       location: filters.value.location || undefined,
-      categories: categoryFilter || undefined
+      categories: categoryFilter || undefined,
+      sort: sortBy.value,
+      page: currentPage.value - 1, // the API counts pages from 0
+      size: pageSize.value
     };
     const response = await productService.getAllProducts(params);
     products.value = response.data;
+    totalProducts.value = Number(response.headers['x-total-count'] ?? response.data.length);
   } catch (error) {
     console.error('Failed to load products:', error);
     products.value = [];
+    totalProducts.value = 0;
   } finally {
     loading.value = false;
   }
@@ -386,13 +340,18 @@ const performSearch = async () => {
       maxPrice: filters.value.maxPrice || undefined,
       conditionLevel: filters.value.conditionLevel || undefined,
       location: filters.value.location || undefined,
-      categories: categoryFilter || undefined
+      categories: categoryFilter || undefined,
+      sort: sortBy.value,
+      page: currentPage.value - 1, // the API counts pages from 0
+      size: pageSize.value
     };
     const response = await productService.getAllProducts(params);
     products.value = response.data;
+    totalProducts.value = Number(response.headers['x-total-count'] ?? response.data.length);
   } catch (error) {
     console.error('Search failed:', error);
     products.value = [];
+    totalProducts.value = 0;
   } finally {
     loading.value = false;
   }
@@ -403,6 +362,7 @@ const goToPage = (page) => {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page;
     jumpToPageInput.value = page;
+    searchKeyword.value.trim() ? performSearch() : fetchProducts();
     // Scroll to the top
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -420,6 +380,7 @@ const jumpToPage = () => {
 const handleSearch = () => {
   if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
+    resetToFirstPage();
     if (searchKeyword.value.trim()) {
       performSearch();
     } else {
@@ -428,7 +389,14 @@ const handleSearch = () => {
   }, 500);
 };
 
+// New criteria: the old page number may not exist for them
+const resetToFirstPage = () => {
+  currentPage.value = 1;
+  jumpToPageInput.value = 1;
+};
+
 const applyFilters = () => {
+  resetToFirstPage();
   performSearch();
 };
 
@@ -442,6 +410,7 @@ const clearFilters = () => {
     mainCategory: '',
     subCategory: ''
   };
+  resetToFirstPage();
   fetchProducts();
 };
 

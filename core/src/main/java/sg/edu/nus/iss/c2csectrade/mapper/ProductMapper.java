@@ -15,7 +15,17 @@ public interface ProductMapper {
                                      @Param("maxPrice") java.math.BigDecimal maxPrice,
                                      @Param("conditionLevel") Integer conditionLevel,
                                      @Param("location") String location,
-                                     @Param("category") String category);
+                                     @Param("category") String category,
+                                     @Param("sort") String sort,
+                                     @Param("limit") Integer limit,
+                                     @Param("offset") Long offset);
+    /** How many products match the same filters as {@link #selectWithFilters}. */
+    long countWithFilters(@Param("keyword") String keyword,
+                          @Param("minPrice") java.math.BigDecimal minPrice,
+                          @Param("maxPrice") java.math.BigDecimal maxPrice,
+                          @Param("conditionLevel") Integer conditionLevel,
+                          @Param("location") String location,
+                          @Param("category") String category);
     int insert(Product product);
     int update(Product product);
     int deleteById(@Param("id") Long id);

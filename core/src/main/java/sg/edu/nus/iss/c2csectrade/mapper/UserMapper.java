@@ -8,6 +8,7 @@ import java.util.List;
 @Mapper
 public interface UserMapper {
     User selectById(@Param("id") Long id);
+    List<User> selectByIds(@Param("ids") java.util.Collection<Long> ids);
     User selectByUsername(@Param("username") String username);
     // Load a user with roles
     User selectByUsernameWithRoles(@Param("username") String username);
