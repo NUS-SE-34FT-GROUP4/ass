@@ -77,6 +77,17 @@ public class ProductController {
         }
     }
 
+    /** Largest page the list accepts; the home page asks for 12. */
+    static final int MAX_PAGE_SIZE = 100;
+    /** Response header carrying how many products match, so the body stays a plain array. */
+    static final String TOTAL_COUNT_HEADER = "X-Total-Count";
+    private static final java.util.Set<String> SORTS =
+            java.util.Set.of("default", "price-asc", "price-desc", "time-asc", "time-desc");
+
+    /**
+     * One page of the product list. The body is the page itself; the total
+     * number of matches is in the X-Total-Count header. page counts from 0.
+     */
     @GetMapping
     public ResponseEntity<List<ProductDTO>> listProducts(
             @RequestParam(required = false) String keyword,
@@ -84,27 +95,27 @@ public class ProductController {
             @RequestParam(required = false) java.math.BigDecimal maxPrice,
             @RequestParam(required = false) Integer conditionLevel,
             @RequestParam(required = false) String location,
-            @RequestParam(required = false) String categories) {
+            @RequestParam(required = false) String categories,
+            @RequestParam(defaultValue = "default") String sort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size) {
+        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE || !SORTS.contains(sort)) {
+            return ResponseEntity.badRequest().build();
+        }
         try {
-            List<ProductDTO> productDTOs;
-
             // A keyword goes to the Search service (relevance, typo tolerance,
             // highlighting); without one, or when Search is down, the database answers
             if (keyword != null && !keyword.trim().isEmpty()) {
                 try {
-                    productDTOs = searchByKeyword(keyword, minPrice, maxPrice, conditionLevel, location, categories);
+                    return page(searchByKeyword(keyword, minPrice, maxPrice, conditionLevel, location, categories, sort),
+                            page, size);
                 } catch (SearchClient.SearchUnavailableException e) {
                     System.err.println(e.getMessage() + "; searching the database instead");
-                    productDTOs = productService.convertToDTOList(productService.listProductsWithFilters(
-                            keyword, minPrice, maxPrice, conditionLevel, location, categories));
                 }
-            } else {
-                List<Product> products = productService.listProductsWithFilters(keyword, minPrice, maxPrice,
-                        conditionLevel, location, categories);
-                productDTOs = productService.convertToDTOList(products);
             }
-
-            return ResponseEntity.ok(productDTOs);
+            ProductService.ProductPage result = productService.listProductsPage(keyword, minPrice, maxPrice,
+                    conditionLevel, location, categories, sort, page, size);
+            return ResponseEntity.ok().header(TOTAL_COUNT_HEADER, String.valueOf(result.total())).body(result.items());
         } catch (Exception e) {
             // Log the details instead of exposing them to the client
             System.err.println("Failed to load product list: " + e.getMessage());
@@ -113,24 +124,48 @@ public class ProductController {
         }
     }
 
+    /** A page cut from search results, which are at most 100 and already loaded. */
+    private static ResponseEntity<List<ProductDTO>> page(List<ProductDTO> all, int page, int size) {
+        int from = (int) Math.min((long) page * size, all.size());
+        int to = Math.min(from + size, all.size());
+        return ResponseEntity.ok().header(TOTAL_COUNT_HEADER, String.valueOf(all.size()))
+                .body(new ArrayList<>(all.subList(from, to)));
+    }
+
     /**
      * Product ids and highlights come from the Search service, everything else
-     * from the database. A product deleted since it was indexed is skipped.
+     * from the database in one batch. A product deleted or sold out since it
+     * was indexed is skipped. Search orders by relevance; any other sort is
+     * applied here, across all hits, before the page is cut.
      */
     private List<ProductDTO> searchByKeyword(String keyword, java.math.BigDecimal minPrice,
-            java.math.BigDecimal maxPrice, Integer conditionLevel, String location, String categories) {
+            java.math.BigDecimal maxPrice, Integer conditionLevel, String location, String categories, String sort) {
         List<SearchClient.Hit> hits = searchClient.search(keyword, minPrice, maxPrice, conditionLevel,
                 location, categories, 100);
 
-        List<ProductDTO> productDTOs = new ArrayList<>();
-        for (SearchClient.Hit hit : hits) {
-            Product product = productService.getProductById(hit.productId());
-            if (product != null) {
-                ProductDTO dto = productService.convertToDTO(product);
-                dto.setHighlightedName(hit.highlightedName());
-                dto.setHighlightedDescription(hit.highlightedDescription());
-                productDTOs.add(dto);
-            }
+        java.util.Map<Long, SearchClient.Hit> byId = new java.util.HashMap<>();
+        hits.forEach(hit -> byId.putIfAbsent(hit.productId(), hit));
+        List<ProductDTO> productDTOs = productService.getListedProductDTOs(
+                hits.stream().map(SearchClient.Hit::productId).distinct().toList());
+        for (ProductDTO dto : productDTOs) {
+            SearchClient.Hit hit = byId.get(dto.getId());
+            dto.setHighlightedName(hit.highlightedName());
+            dto.setHighlightedDescription(hit.highlightedDescription());
+        }
+        java.util.Comparator<ProductDTO> order = switch (sort) {
+            case "price-asc" -> java.util.Comparator.comparing(ProductDTO::getPrice,
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()));
+            case "price-desc" -> java.util.Comparator.comparing(ProductDTO::getPrice,
+                    java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder()));
+            case "time-asc" -> java.util.Comparator.comparing(ProductDTO::getCreateTime,
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()));
+            case "time-desc" -> java.util.Comparator.comparing(ProductDTO::getCreateTime,
+                    java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder()));
+            default -> null; // keep Search's relevance order
+        };
+        if (order != null) {
+            productDTOs = new ArrayList<>(productDTOs);
+            productDTOs.sort(order);
         }
         return productDTOs;
     }

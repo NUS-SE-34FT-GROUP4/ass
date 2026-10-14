@@ -24,31 +24,8 @@
     <select id="selectByUserId" resultMap="ProductResultMap">
         SELECT * FROM pms_product WHERE user_id = #{userId} AND status = 1 ORDER BY created_at DESC
     </select>
-    <select id="selectWithFilters" resultMap="ProductResultMap">
-        SELECT *,
-        <if test="keyword != null and keyword != ''">
-            <!-- Relevance score: exact name match > name contains > description contains > category match -->
-            (
-                CASE
-                    WHEN LOWER(name) = LOWER(#{keyword}) THEN 100
-                    WHEN LOWER(name) LIKE CONCAT(LOWER(#{keyword}), '%') THEN 80
-                    WHEN LOWER(name) LIKE CONCAT('%', LOWER(#{keyword}), '%') THEN 60
-                    ELSE 0
-                END +
-                CASE
-                    WHEN LOWER(description) LIKE CONCAT('%', LOWER(#{keyword}), '%') THEN 30
-                    ELSE 0
-                END +
-                CASE
-                    WHEN LOWER(category) LIKE CONCAT('%', LOWER(#{keyword}), '%') THEN 20
-                    ELSE 0
-                END
-            ) as relevance_score
-        </if>
-        <if test="keyword == null or keyword == ''">
-            0 as relevance_score
-        </if>
-        FROM pms_product
+    <!-- Filters shared by the page query and its count, so both always agree. -->
+    <sql id="listFilters">
         WHERE status = 1 AND stock > 0
         <if test="keyword != null and keyword != ''">
             AND (
@@ -77,11 +54,52 @@
         <if test="category != null and category != ''">
             AND FIND_IN_SET(category, #{category}) > 0
         </if>
-        ORDER BY
+    </sql>
+
+    <select id="selectWithFilters" resultMap="ProductResultMap">
+        SELECT *,
         <if test="keyword != null and keyword != ''">
-            relevance_score DESC,
+            <!-- Relevance score: exact name match > name contains > description contains > category match -->
+            (
+                CASE
+                    WHEN LOWER(name) = LOWER(#{keyword}) THEN 100
+                    WHEN LOWER(name) LIKE CONCAT(LOWER(#{keyword}), '%') THEN 80
+                    WHEN LOWER(name) LIKE CONCAT('%', LOWER(#{keyword}), '%') THEN 60
+                    ELSE 0
+                END +
+                CASE
+                    WHEN LOWER(description) LIKE CONCAT('%', LOWER(#{keyword}), '%') THEN 30
+                    ELSE 0
+                END +
+                CASE
+                    WHEN LOWER(category) LIKE CONCAT('%', LOWER(#{keyword}), '%') THEN 20
+                    ELSE 0
+                END
+            ) as relevance_score
         </if>
-        created_at DESC
+        <if test="keyword == null or keyword == ''">
+            0 as relevance_score
+        </if>
+        FROM pms_product
+        <include refid="listFilters"/>
+        ORDER BY
+        <!-- sort is matched against fixed values here, never concatenated into the SQL -->
+        <choose>
+            <when test="sort == 'price-asc'">price ASC, id DESC</when>
+            <when test="sort == 'price-desc'">price DESC, id DESC</when>
+            <when test="sort == 'time-asc'">created_at ASC, id ASC</when>
+            <when test="sort == 'time-desc'">created_at DESC, id DESC</when>
+            <when test="keyword != null and keyword != ''">relevance_score DESC, created_at DESC, id DESC</when>
+            <otherwise>created_at DESC, id DESC</otherwise>
+        </choose>
+        <if test="limit != null">
+            LIMIT #{limit} OFFSET #{offset}
+        </if>
+    </select>
+
+    <select id="countWithFilters" resultType="long">
+        SELECT COUNT(*) FROM pms_product
+        <include refid="listFilters"/>
     </select>
     <insert id="insert" parameterType="sg.edu.nus.iss.c2csectrade.entity.Product" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO pms_product (user_id, name, description, price, stock, condition_level, location, category, status, created_at, updated_at)

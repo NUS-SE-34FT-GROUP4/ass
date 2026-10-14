@@ -20,7 +20,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -158,19 +163,51 @@ public class ProductService {
         return products;
     }
 
+    /** One page of the product list, newest first unless {@code sort} says otherwise. */
+    public record ProductPage(List<ProductDTO> items, long total) {
+    }
+
     /**
-     * Product query with filters
+     * One page of products matching the filters, plus how many match in total.
+     * Loading a page costs four queries whatever its size: the count, the page,
+     * its media and its sellers. Listing everything at once took 8.4 s for
+     * 10,000 products in the WP10 load test.
      */
-    public List<Product> listProductsWithFilters(String keyword, java.math.BigDecimal minPrice,
-            java.math.BigDecimal maxPrice, Integer conditionLevel,
-            String location, String category) {
-        List<Product> products = productMapper.selectWithFilters(keyword, minPrice, maxPrice, conditionLevel, location,
-                category);
-        // Load media for each product
-        for (Product product : products) {
-            List<ProductMedia> media = productMediaMapper.selectByProductId(product.getId());
-            product.setMedia(media);
+    public ProductPage listProductsPage(String keyword, java.math.BigDecimal minPrice,
+            java.math.BigDecimal maxPrice, Integer conditionLevel, String location, String category,
+            String sort, int page, int size) {
+        long total = productMapper.countWithFilters(keyword, minPrice, maxPrice, conditionLevel, location, category);
+        if (total == 0 || (long) page * size >= total) {
+            return new ProductPage(List.of(), total);
         }
+        List<Product> products = productMapper.selectWithFilters(keyword, minPrice, maxPrice, conditionLevel,
+                location, category, sort, size, (long) page * size);
+        return new ProductPage(convertToDTOList(withMedia(products)), total);
+    }
+
+    /**
+     * The products with these ids that are still listed, in the order given,
+     * with media and sellers loaded in one query each. Used for search hits.
+     */
+    public List<ProductDTO> getListedProductDTOs(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Product> byId = productMapper.selectByIds(ids).stream()
+                .collect(Collectors.toMap(Product::getId, Function.identity(), (a, b) -> a));
+        List<Product> ordered = ids.stream().map(byId::get).filter(Objects::nonNull).toList();
+        return convertToDTOList(withMedia(ordered));
+    }
+
+    /** Attaches each product's media using a single query for the whole list. */
+    private List<Product> withMedia(List<Product> products) {
+        if (products.isEmpty()) {
+            return products;
+        }
+        Map<Long, List<ProductMedia>> byProduct = productMediaMapper
+                .selectByProductIds(products.stream().map(Product::getId).toList()).stream()
+                .collect(Collectors.groupingBy(m -> m.getProduct().getId()));
+        products.forEach(p -> p.setMedia(byProduct.getOrDefault(p.getId(), new ArrayList<>())));
         return products;
     }
 
@@ -181,6 +218,12 @@ public class ProductService {
         if (product == null) {
             return null;
         }
+        User seller = product.getUserId() == null ? null : userMapper.selectById(product.getUserId());
+        return convertToDTO(product, seller);
+    }
+
+    /** As {@link #convertToDTO(Product)}, with the seller already loaded by the caller. */
+    private ProductDTO convertToDTO(Product product, User seller) {
 
         ProductDTO dto = new ProductDTO();
         dto.setId(product.getId()); // id is already a Long
@@ -196,14 +239,11 @@ public class ProductService {
         dto.setCreateTime(product.getCreatedAt());
         dto.setUpdateTime(product.getUpdatedAt());
 
-        // Get user info
-        if (product.getUserId() != null) {
-            User user = userMapper.selectById(product.getUserId());
-            if (user != null) {
-                dto.setUsername(user.getUsername());
-                dto.setDisplayName(user.getDisplayName());
-                dto.setAvatarUrl(user.getAvatarUrl()); // Avatar URL
-            }
+        // Seller info
+        if (seller != null) {
+            dto.setUsername(seller.getUsername());
+            dto.setDisplayName(seller.getDisplayName());
+            dto.setAvatarUrl(seller.getAvatarUrl()); // Avatar URL
         }
 
         // Convert media list
@@ -254,11 +294,16 @@ public class ProductService {
      * Convert list of Products to list of ProductDTOs
      */
     public List<ProductDTO> convertToDTOList(List<Product> products) {
-        if (products == null) {
+        if (products == null || products.isEmpty()) {
             return new ArrayList<>();
         }
+        // All sellers in one query, instead of one per product
+        Collection<Long> sellerIds = products.stream().map(Product::getUserId).filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<Long, User> sellers = sellerIds.isEmpty() ? Map.of() : userMapper.selectByIds(sellerIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity(), (a, b) -> a));
         return products.stream()
-                .map(this::convertToDTO)
+                .map(p -> convertToDTO(p, p.getUserId() == null ? null : sellers.get(p.getUserId())))
                 .collect(Collectors.toList());
     }
 
