@@ -180,10 +180,12 @@ public class RabbitMQConfig {
 
     // The Search service consumes this queue. Search declares it and its
     // bindings too, identically, so events wait in the queue whichever
-    // service starts first.
+    // service starts first. Single active consumer keeps a product's events
+    // in order across Search tasks; the arguments must match Search's, or
+    // the second declaration fails.
     @Bean
     public Queue searchProductQueue() {
-        return QueueBuilder.durable(SEARCH_PRODUCT_QUEUE).build();
+        return QueueBuilder.durable(SEARCH_PRODUCT_QUEUE).singleActiveConsumer().build();
     }
 
     @Bean
