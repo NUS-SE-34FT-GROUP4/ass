@@ -163,16 +163,6 @@ public class ProductService {
         return products;
     }
 
-    /**
-     * Product query with filters
-     */
-    public List<Product> listProductsWithFilters(String keyword, java.math.BigDecimal minPrice,
-            java.math.BigDecimal maxPrice, Integer conditionLevel,
-            String location, String category) {
-        return withMedia(productMapper.selectWithFilters(keyword, minPrice, maxPrice, conditionLevel, location,
-                category, null, null, null));
-    }
-
     /** One page of the product list, newest first unless {@code sort} says otherwise. */
     public record ProductPage(List<ProductDTO> items, long total) {
     }

@@ -81,6 +81,24 @@ class ProductControllerSearchTest {
     }
 
     @Test
+    void searchHitsCanBeSortedByPriceDescendingOrByAge() {
+        when(searchClient.search("lamp", null, null, null, null, null, 100)).thenReturn(List.of(
+                new SearchClient.Hit(1L, "a", "a"), new SearchClient.Hit(2L, "b", "b"),
+                new SearchClient.Hit(3L, "c", "c")));
+        ProductDTO older = dto(1L, "10");
+        older.setCreateTime(java.time.LocalDateTime.of(2026, 1, 1, 0, 0));
+        ProductDTO newest = dto(2L, "30");
+        newest.setCreateTime(java.time.LocalDateTime.of(2026, 3, 1, 0, 0));
+        ProductDTO middle = dto(3L, "20");
+        middle.setCreateTime(java.time.LocalDateTime.of(2026, 2, 1, 0, 0));
+        when(productService.getListedProductDTOs(List.of(1L, 2L, 3L))).thenReturn(List.of(older, newest, middle));
+
+        assertThat(list("lamp", "price-desc", 0, 12).getBody()).extracting(ProductDTO::getId).containsExactly(2L, 3L, 1L);
+        assertThat(list("lamp", "time-asc", 0, 12).getBody()).extracting(ProductDTO::getId).containsExactly(1L, 3L, 2L);
+        assertThat(list("lamp", "time-desc", 0, 12).getBody()).extracting(ProductDTO::getId).containsExactly(2L, 3L, 1L);
+    }
+
+    @Test
     void searchDownFallsBackToTheDatabasePage() {
         when(searchClient.search(any(), any(), any(), any(), any(), any(), any(Integer.class)))
                 .thenThrow(new SearchClient.SearchUnavailableException(new ResourceAccessException("refused")));

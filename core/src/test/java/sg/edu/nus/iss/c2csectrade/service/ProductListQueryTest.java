@@ -156,4 +156,21 @@ class ProductListQueryTest {
         assertThat(hits).extracting(ProductDTO::getId).containsExactly(2000003L, 2000001L);
         assertThat(hits).allSatisfy(p -> assertThat(p.getUsername()).isEqualTo("list_seller"));
     }
+
+    @Test
+    void noSearchHitsOrOnlyUnlistedOnesLoadNothing() {
+        jdbc.update("UPDATE pms_product SET status = 0 WHERE id IN (2000004, 2000005)");
+
+        assertThat(products.getListedProductDTOs(List.of())).isEmpty();
+        assertThat(products.getListedProductDTOs(List.of(2000004L, 2000005L))).isEmpty();
+    }
+
+    /** The detail page converts one product on its own and still gets its seller and images. */
+    @Test
+    void aSingleProductCarriesItsSellerAndMedia() {
+        ProductDTO detail = products.getProductDTOById(2000010L);
+
+        assertThat(detail.getUsername()).isEqualTo("list_seller");
+        assertThat(detail.getImageUrls()).containsExactly("https://img.invalid/2000010-0", "https://img.invalid/2000010-1");
+    }
 }
