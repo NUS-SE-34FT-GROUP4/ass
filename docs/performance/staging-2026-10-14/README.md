@@ -101,3 +101,47 @@ or flush Redis.
    changes with YU and repeat for comparison.
 
 Offline script behavior and fixture-generator tests passed after the route correction.
+
+## Authenticated fixture follow-up (15:14–15:15 UTC / 23:14–23:15 Singapore)
+
+Supplied private fixtures were validated locally: 1,999 unique buyer names and tokens,
+10,000 distinct product IDs, matching JWT subjects and payment-password format. Tokens
+expire at 2026-10-14 17:05:26 UTC (Oct 15 01:05:26 Singapore). Credentials are retained
+only under the ignored `tests/load/generated/staging-private/` directory, not committed.
+
+Read-only API preflight authenticated two buyers successfully. A sampled buyer had
+10,000,000 balance; the first and last fixture products existed, each at price 10 and
+stock 10,000. Keyword search returned 100 rows and personalised recommendations 10.
+This samples the imported dataset; it does not verify every account balance or JWT.
+
+The subsequent k6 run used `MODE=smoke VUS=2 HOLD=30s`, one-second think time and the
+supplied fixtures. It intentionally made no payments/cart writes or chat sends. Result:
+**exit 99 (threshold failure)**, 25 HTTP requests, 5 failed (20%). All five failures were
+browse requests hitting the 10-second client timeout. The other 20 requests passed.
+
+| Read path | Requests passed / failed | P95 ms |
+|---|---:|---:|
+| Browse | 0 / 5 | 10006.20 (timeouts, not completed-response latency) |
+| Search | 5 / 0 | 1410.22 |
+| Detail | 4 / 0 | 170.70 |
+| Similar recommendations | 4 / 0 | 407.00 |
+| Personalised recommendations | 4 / 0 | 265.98 |
+| Cart list | 3 / 0 | 170.58 |
+
+Exact data: `authenticated-smoke-summary.json`. The few samples are diagnostic, not stable
+performance estimates. Its deployment/revision fields are unknown/unspecified because
+running ECS image digests and scaling state were not independently verified; do not label
+this a fixed-one-instance baseline. Smoke uses constant VUs; the summary's generic ramp/down
+metadata is not an applied ramp stage in this mode.
+
+After k6 finished, one sequential browse with a 60-second timeout returned HTTP 200 in
+8425.08ms, 10,001 items and 5,399,426 bytes (CloudFront miss). See `browse-diagnostic.json`.
+This establishes that the list is already slow at low load with the imported dataset.
+Unbounded response size and per-product hydration are candidates identified in source;
+SQL timings are still needed to apportion the bottleneck precisely.
+
+**Do not escalate this result to 200 VUs or interpret it as an autoscaling test.** First
+address the unbounded list and per-product media/seller queries, deploy a reviewed fix,
+then repeat the same low-load checks. Once they pass, run staged mixed traffic and the
+fixed/scaling comparison. No scaling parameters were changed and no full-load, oversell,
+accounting-consistency or chat-delivery pass is claimed by this follow-up.

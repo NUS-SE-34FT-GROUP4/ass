@@ -1,0 +1,10 @@
+{
+  "startedAt": "2026-10-14T15:15:06.513887+00:00",
+  "path": "/api/products",
+  "timeoutSeconds": 60,
+  "status": 200,
+  "bytes": 5399426,
+  "items": 10001,
+  "cache": "Miss from cloudfront",
+  "elapsedMs": 8425.08
+}
