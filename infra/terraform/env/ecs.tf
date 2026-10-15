@@ -200,8 +200,12 @@ locals {
     MINIO_ACCESSKEY       = ""
     MINIO_SECRETKEY       = ""
     MEDIA_PUBLIC_BASE_URL = "https://${aws_cloudfront_distribution.main.domain_name}/media"
-    AWS_REGION            = var.region
-    APP_ENVIRONMENT       = terraform.workspace
+    # Browsers send Origin on every POST and on the WebSocket handshake; Core and
+    # Chat only accept the origins listed here (their default is localhost), so
+    # each environment allows its own CloudFront domain.
+    APP_CORS_ALLOWED_ORIGINS = "https://${aws_cloudfront_distribution.main.domain_name}"
+    AWS_REGION               = var.region
+    APP_ENVIRONMENT          = terraform.workspace
   }
 
   db_user_secret = {
