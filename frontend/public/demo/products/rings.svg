@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">
+  <rect width="480" height="480" rx="24" fill="#fdf2f8"/>
+  <ellipse cx="240" cy="380" rx="150" ry="16" fill="#d53f8c" opacity="0.12"/>
+  <!-- book box set -->
+  <g transform="translate(130 130)">
+    <rect x="0" y="10" width="74" height="220" rx="8" fill="#4c51bf"/>
+    <rect x="84" y="0" width="74" height="230" rx="8" fill="#b83280"/>
+    <rect x="168" y="22" width="74" height="208" rx="8" fill="#2c7a7b"/>
+    <g fill="#ffffff" opacity="0.8">
+      <rect x="14" y="40" width="46" height="8" rx="4"/><rect x="98" y="30" width="46" height="8" rx="4"/><rect x="182" y="52" width="46" height="8" rx="4"/>
+      <rect x="14" y="58" width="30" height="8" rx="4"/><rect x="98" y="48" width="30" height="8" rx="4"/><rect x="182" y="70" width="30" height="8" rx="4"/>
+    </g>
+    <rect x="0" y="10" width="74" height="220" rx="8" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="3"/>
+  </g>
+</svg>
