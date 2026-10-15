@@ -10,9 +10,14 @@
 -- Sellers reuse the seed accounts (seller_lvl1-5, IDs 101-105, password
 -- admin123) so demo buyers can chat with, review and bargain against them.
 --
--- Apply: mysql -h <host> -u <user> -p trade < scripts/seed-demo-products.sql
+-- Direct DB writes bypass the product-event bus, so rebuild the search
+-- index after seeding or the new items will not be searchable.
+--
+-- Apply: mysql -h <host> -u <user> -p < scripts/seed-demo-products.sql
 -- (staging: the same channel used for grants.sql; the core_svc user may
 --  write products, otherwise run as an admin user)
+
+USE trade;
 
 DELETE FROM pms_product_media WHERE product_id BETWEEN 9001 AND 9012;
 DELETE FROM pms_product WHERE id BETWEEN 9001 AND 9012;
