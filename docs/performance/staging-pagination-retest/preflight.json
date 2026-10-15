@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-14T15:57:07.081082+00:00",
+  "results": [
+    {
+      "path": "/api/products",
+      "status": 200,
+      "items": 12,
+      "total": "10001",
+      "bytes": 6481,
+      "elapsedMs": 125.55,
+      "cache": "Miss from cloudfront"
+    },
+    {
+      "path": "/api/products?page=1&size=12",
+      "status": 200,
+      "items": 12,
+      "total": "10001",
+      "bytes": 6481,
+      "elapsedMs": 126.73,
+      "cache": "Miss from cloudfront"
+    },
+    {
+      "path": "/api/products?keyword=book&page=0&size=20",
+      "status": 200,
+      "items": 20,
+      "total": "100",
+      "bytes": 11861,
+      "elapsedMs": 1198.9,
+      "cache": "Miss from cloudfront"
+    }
+  ]
+}
