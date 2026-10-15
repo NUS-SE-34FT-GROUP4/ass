@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-15T15:12:34.889400+00:00",
+  "checks": [
+    {
+      "endpoint": "/api/users/me",
+      "status": 200,
+      "ms": 682.9
+    },
+    {
+      "endpoint": "/api/users/me",
+      "status": 200,
+      "ms": 314.55
+    },
+    {
+      "endpoint": "/api/products?page=0&size=12",
+      "status": 200,
+      "ms": 718.2
+    },
+    {
+      "endpoint": "/api/products/{id}",
+      "status": 200,
+      "ms": 376.86
+    },
+    {
+      "endpoint": "/api/products/{id}",
+      "status": 200,
+      "ms": 303.92
+    }
+  ]
+}
