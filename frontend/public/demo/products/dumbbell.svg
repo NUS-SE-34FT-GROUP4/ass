@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">
+  <rect width="480" height="480" rx="24" fill="#eef7ff"/>
+  <ellipse cx="240" cy="340" rx="160" ry="16" fill="#2b6cb0" opacity="0.12"/>
+  <!-- adjustable dumbbell -->
+  <g transform="translate(70 210)">
+    <rect x="40" y="26" width="280" height="22" rx="11" fill="#4a5568"/>
+    <g fill="#2b6cb0">
+      <rect x="16" y="-16" width="52" height="106" rx="12"/>
+      <rect x="58" y="0" width="46" height="74" rx="10" fill="#3182ce"/>
+    </g>
+    <g fill="#2b6cb0">
+      <rect x="292" y="-16" width="52" height="106" rx="12"/>
+      <rect x="256" y="0" width="46" height="74" rx="10" fill="#3182ce"/>
+    </g>
+    <rect x="150" y="30" width="60" height="14" rx="7" fill="#718096"/>
+  </g>
+</svg>

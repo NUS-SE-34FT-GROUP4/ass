@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">
+  <rect width="480" height="480" rx="24" fill="#f6eeff"/>
+  <ellipse cx="240" cy="408" rx="120" ry="16" fill="#805ad5" opacity="0.12"/>
+  <!-- acoustic guitar -->
+  <g transform="translate(150 40) rotate(8)">
+    <rect x="58" y="0" width="16" height="190" rx="8" fill="#5d3a1a"/>
+    <rect x="46" y="0" width="40" height="46" rx="8" fill="#744210"/>
+    <circle cx="66" cy="26" r="5" fill="#f6e05e"/>
+    <path d="M66 170 C-6 190 -12 300 40 330 C66 344 96 344 122 330 C176 298 152 186 66 170 Z" fill="#d69e2e"/>
+    <path d="M66 170 C20 186 16 260 46 292 C60 306 96 306 112 288 C138 258 128 192 66 170 Z" fill="#b7791f"/>
+    <circle cx="66" cy="248" r="26" fill="#fffaf0"/>
+    <circle cx="66" cy="248" r="26" fill="none" stroke="#744210" stroke-width="6"/>
+    <rect x="60" y="196" width="12" height="150" rx="6" fill="#744210"/>
+    <circle cx="66" cy="330" r="12" fill="#f6e05e"/>
+  </g>
+</svg>
