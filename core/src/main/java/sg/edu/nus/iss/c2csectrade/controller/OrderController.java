@@ -62,8 +62,9 @@ public class OrderController {
     }
 
     @GetMapping("/{orderId}")
-    public ResponseEntity<Order> getOrderById(@PathVariable Integer orderId) {
-        Order order = orderService.getOrderById(orderId);
+    public ResponseEntity<Order> getOrderById(@PathVariable Integer orderId, Authentication authentication) {
+        User user = userMapper.selectByUsername(authentication.getName());
+        Order order = orderService.getOrderForUser(orderId, user.getId().intValue());
         return ResponseEntity.ok(order);
     }
 
@@ -79,14 +80,16 @@ public class OrderController {
     }
 
     @PostMapping("/{orderId}/confirm")
-    public ResponseEntity<Order> confirmOrder(@PathVariable Integer orderId) {
-        Order order = orderService.confirmOrder(orderId);
+    public ResponseEntity<Order> confirmOrder(@PathVariable Integer orderId, Authentication authentication) {
+        User user = userMapper.selectByUsername(authentication.getName());
+        Order order = orderService.confirmOrder(orderId, user.getId().intValue());
         return ResponseEntity.ok(order);
     }
 
     @PostMapping("/{orderId}/cancel")
-    public ResponseEntity<Order> cancelOrder(@PathVariable Integer orderId) {
-        Order order = orderService.cancelOrder(orderId);
+    public ResponseEntity<Order> cancelOrder(@PathVariable Integer orderId, Authentication authentication) {
+        User user = userMapper.selectByUsername(authentication.getName());
+        Order order = orderService.cancelOrder(orderId, user.getId().intValue());
         return ResponseEntity.ok(order);
     }
 

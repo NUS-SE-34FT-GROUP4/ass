@@ -64,7 +64,7 @@ class OrderStatusTransitionTest {
         when(orderMapper.findById(1)).thenReturn(pendingOrder());
         when(orderMapper.updateStatusIfPending(any())).thenReturn(1);
 
-        Order cancelled = orderService.cancelOrder(1);
+        Order cancelled = orderService.cancelOrder(1, 7);
 
         assertThat(cancelled.getStatus()).isEqualTo("CANCELED");
         verifyNoInteractions(cartItemMapper, productMapper);
@@ -75,7 +75,7 @@ class OrderStatusTransitionTest {
         when(orderMapper.findById(1)).thenReturn(pendingOrder());
         when(orderMapper.updateStatusIfPending(any())).thenReturn(0);
 
-        assertThatThrownBy(() -> orderService.cancelOrder(1))
+        assertThatThrownBy(() -> orderService.cancelOrder(1, 7))
                 .hasMessageContaining("not pending");
     }
 
