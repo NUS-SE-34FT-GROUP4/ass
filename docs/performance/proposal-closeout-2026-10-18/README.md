@@ -105,3 +105,45 @@ These are whole-module JaCoCo LINE counters, distinct from the service-layer cou
 | Total | 149 | 920 / 3836 | 23.98% |
 
 All modules reported zero test failures, errors and skips. Neither the whole-module total nor the service-layer total meets 70%.
+
+## P19/P20 rehearsal guide
+
+The online presentation was updated on 18 October: P19 reports the observed Search 1 → 2 → 1 cycle and the search-burst metrics; P20 reports 149 passing tests and 18.67% service-layer line coverage. Both slides were visually checked and the editor confirmed cloud save.
+
+### Evidence walkthrough (about 90 seconds)
+
+1. Show `screenshots/search-baseline.jpg`: Search starts with one task.
+2. Show `screenshots/search-request-rate.jpg`: the burst reaches approximately 1,750 requests per target per minute. This graph value is a visual approximation, not an exported exact peak.
+3. Show `screenshots/search-scale-out-curve.jpg` and `screenshots/search-2-running.jpg`: desired/running tasks increase to two. Core and Chat were sampled at one each; this is not continuous proof of their counts throughout the window.
+4. Show `screenshots/search-back-to-one.jpg`: Search returns to one. ECS events place the additional task start at 06:07 UTC and the task stop at 06:24 UTC. The observer did not change desired counts or deploy a new revision.
+5. State the bounded result: 30 VUs, 7,431 requests, zero HTTP/business errors, P95 85.54 ms, maximum 8,279.04 ms. This is not a 200-VU capacity claim or a fixed-one-task versus autoscaling comparison.
+6. On P20, distinguish 149 passing tests from service-layer coverage of 18.67%, below the 70% proposal target. A green SonarCloud gate uses a separate criterion.
+
+Suggested narration: “On 18 October, our bounded production search burst was followed by a Search task-count change from one to two, then back to one after load stopped. The screenshots and ECS event times are recorded in PR 71. The precise scaling-policy cause is still awaiting activity-read access. We do not claim a 200-user capacity result.”
+
+This walkthrough uses recorded screenshots, not a live test or a screen recording. No video has been captured. During rehearsal, show the existing evidence rather than restart production load without a fresh exclusive window. If a recording is needed, label a recording of this walkthrough as an evidence review; do not present it as footage captured during the original load run.
+
+### Owner follow-up for the remaining activity trail
+
+Request read-only `application-autoscaling:DescribeScalingActivities` and `application-autoscaling:DescribeScalableTargets` for the relevant ECS production Search target, or ask the owner to export the matching activity records. The console denied both actions. Capture cause, status and timestamps around 06:02–06:26 UTC on 18 October. Do not change scaling settings merely to obtain a screenshot.
+
+## A2 readiness and execution handoff
+
+Before any write request, obtain a new staging-only product with stock 1, its seller identity, and at least two distinct funded buyers who are not the seller. Each buyer must have a current JWT and a six-digit payment password. Keep these in a private local fixture, outside Git. Confirm the fixture product/keyword arrays are non-empty, as required by config.js. Confirm the staging hostname and a fresh no-overlap window; verify at least two healthy Core instances.
+
+For a minimal two-buyer run, use the existing script with matching BUYERS and VUS values. This is a preparation example, not an executed test:
+
+```sh
+k6 run \
+  -e BASE_URL=https://STAGING_HOST \
+  -e FIXTURES=/absolute/private/fixtures.json \
+  -e ENABLE_WRITES=true \
+  -e PRODUCT_ID=DEDICATED_ID \
+  -e INITIAL_STOCK=1 -e BUYERS=2 -e VUS=2 \
+  --summary-export=/absolute/private/oversell-summary.json \
+  tests/load/oversell.js
+```
+
+Replace the placeholders only after validating the supplied fixture and product. The script creates all orders first, then submits concurrent balance payments. It passes only if exactly one payment and persisted order are PAID, final stock is zero, and every unsuccessful payment is rejected specifically for stock. Authentication errors, timeouts and unrelated database errors do not count as correct stock rejection. The test does not automatically clean up orders, and setup failure can leave partial unpaid orders: record them privately and coordinate cleanup.
+
+To claim cross-instance correctness, retain owner-provided routing/log evidence showing requests reached distinct Core instances and a ledger/stock audit showing one charge with no unintended balance loss. Having two running instances alone is insufficient. Publish sanitized aggregates; retain account, token, order and balance details privately. A2 remains unexecuted until these prerequisites arrive.
