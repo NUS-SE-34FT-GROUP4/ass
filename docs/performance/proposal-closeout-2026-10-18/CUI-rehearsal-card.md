@@ -52,3 +52,12 @@ Screenshot sequence in this directory: search-baseline.jpg → search-request-ra
 No original load-test video was captured. A retrospective walkthrough may show these real screenshots, but must be labelled as such. A new live capture requires another coordinated window. No seed script should be rerun against demo products with existing orders.
 
 Final operator/user-flow speaker assignment belongs to the team. CUI owns only the load/scaling narration here. Do not overwrite teammates' current assignments based on older scripts.
+
+## Final evidence and handoff checklist
+
+- A1: five Search scaling screenshots and both search-run summaries are in this report folder. Exact scaling-policy activity records remain unavailable. No original run video was captured.
+- A2: private local screenshots record stock rejection, payment success, persisted unpaid/paid orders, final stock zero and both post-payment balances. The source ALB files and database audit were summarized by the owner through the user; the raw export has not yet been delivered to this workspace. Preserve it for traceability.
+- P19/P20 speaker notes now include the bounded A2 result, owner-reported routing/database provenance, approximately 31 ms overlap and HTTP 500 limitation.
+- Owner action pending: restore Core minimum capacity to one and disable ALB logging; retain exported logs until archived. No further test is planned for this closeout.
+- Remaining proposal deviations: 200-VU capacity and fixed-one-task comparison not executed; service-layer coverage 18.67%, below 70%. Do not present these as completed.
+- Team handoff pending: final seller account, recording location and rehearsal run sheet. Do not reseed products with orders.
