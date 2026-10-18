@@ -7,8 +7,11 @@ import sg.edu.nus.iss.c2csectrade.service.CreditScoreService;
 import sg.edu.nus.iss.c2csectrade.service.OrderService;
 import sg.edu.nus.iss.c2csectrade.service.HybridRecommendationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -322,10 +325,14 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public Order confirmOrder(Integer orderId) {
+    public Order confirmOrder(Integer orderId, Integer userId) {
         Order order = orderMapper.findById(orderId);
         if (order == null) {
             throw new RuntimeException("Order not found");
+        }
+        // Confirming receipt releases escrow to the seller, so only the buyer may do it
+        if (!order.getUserId().equals(userId)) {
+            throw new AccessDeniedException("Only the buyer can confirm receipt of this order");
         }
         if (!"PAID".equals(order.getStatus()) && !"DELIVERED".equals(order.getStatus())) {
             throw new RuntimeException("Only paid orders can be confirmed as received");
@@ -379,8 +386,15 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public Order cancelOrder(Integer orderId) {
+    public Order cancelOrder(Integer orderId, Integer userId) {
         Order order = orderMapper.findById(orderId);
+        if (order != null && !order.getUserId().equals(userId)) {
+            throw new AccessDeniedException("Only the buyer can cancel this order");
+        }
+        return cancelPendingOrder(order);
+    }
+
+    private Order cancelPendingOrder(Order order) {
         if (order == null || !"PENDING".equals(order.getStatus())) {
             throw new RuntimeException("Order not found or not pending");
         }
@@ -408,9 +422,29 @@ public class OrderServiceImpl implements OrderService {
         return orderMapper.findBySellerId(sellerId);
     }
 
+    /**
+     * An order is visible to its buyer and to the seller of any of its items.
+     */
     @Override
-    public Order getOrderById(Integer orderId) {
-        return orderMapper.findById(orderId);
+    public Order getOrderForUser(Integer orderId, Integer userId) {
+        Order order = orderMapper.findById(orderId);
+        if (order == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
+        }
+        if (order.getUserId().equals(userId) || sellsAnItemIn(orderId, userId)) {
+            return order;
+        }
+        throw new AccessDeniedException("Not your order");
+    }
+
+    private boolean sellsAnItemIn(Integer orderId, Integer userId) {
+        for (OrderItem item : orderItemMapper.findByOrderId(orderId)) {
+            Product product = productMapper.selectById(item.getProductId().longValue());
+            if (product != null && Long.valueOf(userId).equals(product.getUserId())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -426,7 +460,7 @@ public class OrderServiceImpl implements OrderService {
             if ("PENDING".equals(order.getStatus()) && order.getExpireTime() != null && order.getExpireTime().before(now)) {
                 try {
                     // Reuse the existing cancel logic
-                    cancelOrder(order.getId());
+                    cancelPendingOrder(order);
                 } catch (Exception e) {
                     // If cancelling fails, log it and continue (does not block the new order)
                     System.err.println("Failed to cancel expired order: " + order.getId() + ", error: " + e.getMessage());

@@ -9,9 +9,9 @@ public interface OrderService {
     Order createOrderForProduct(Integer userId, Long productId, Integer quantity);
     Order createBargainOrder(Integer userId, Long productId, Integer quantity, java.math.BigDecimal customPrice);
     Order payOrder(Integer orderId, Integer userId, PaymentRequest paymentRequest);
-    Order confirmOrder(Integer orderId);
-    Order cancelOrder(Integer orderId);
+    Order confirmOrder(Integer orderId, Integer userId);
+    Order cancelOrder(Integer orderId, Integer userId);
     List<Order> getUserOrders(Integer userId);
     List<Order> getSellerOrders(Integer sellerId);
-    Order getOrderById(Integer orderId);
+    Order getOrderForUser(Integer orderId, Integer userId);
 }
