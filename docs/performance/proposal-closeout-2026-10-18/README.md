@@ -50,17 +50,29 @@ Before execution: confirm production hostname, exclusive window, deployed revisi
 
 Collect UTC times, Search/Core/Chat desired and running tasks, scaling activities, ALB requests per target, latency, errors and CPU before/during/after. A passing HTTP run alone does not prove scale-out. The 200-VU five-minute ramp/fifteen-minute hold and fixed-one-task versus 1–4 comparison remain separate uncompleted promises, not covered by a search burst.
 
-## A2: oversell — prepared, not executed
+## A2: cross-instance oversell — verified in a two-buyer test
 
-Existing tests/load/oversell.js prepares orders then concurrently pays from distinct funded buyers, requiring exactly INITIAL_STOCK paid orders and final stock zero. Use only a new dedicated staging product, never demo inventory; confirm ZHOU is not running overlapping tests. Fresh buyer credentials/payment passwords and a valid dedicated product are required. Existing shared fixture tokens have expired.
+On 18 October, two distinct funded staging buyers attempted balance payments for a dedicated CNY 10 test product with initial stock one. Both orders were prepared before payment. Confirmation clicks were dispatched together through separate browsers at 08:58:29 UTC (16:58:29 Singapore). The ECS console showed two desired/running Core tasks before submission.
 
-Verify at least two Core instances and correlate requests with instance/log evidence before claiming cross-instance validation. Preserve stock, order quantities, payment/transaction and balance audit evidence; API totals alone are not full accounting proof. Coordinate cleanup of unpaid and paid test orders with the owner. Do not treat authentication errors or timeouts as successful stock-conflict rejection.
+Direct UI observations: one payment succeeded and its order persisted as Paid; the other displayed “Not enough stock” and remained Awaiting payment. A subsequent product read showed stock zero. The successful buyer's balance changed from CNY 10 to zero, while the rejected buyer retained CNY 10. Raw screenshots and identifiers are retained privately.
+
+The coordinator subsequently supplied the following ALB log correlation and database audit through the user. These are owner-reported records, not logs independently downloaded by this operator: S3 object listing succeeded, but direct object reads were denied by IAM.
+
+| Payment outcome | Core target | HTTP status | Processing interval, Singapore time (18 October) |
+|---|---|---:|---|
+| Successful buyer | 10.0.10.114 | 200 | 16:58:31.304–16:58:31.987 |
+| Stock-rejected buyer | 10.0.10.117 | 500 | 16:58:31.956–16:58:32.093 |
+
+The reported intervals overlap by approximately 31 ms (31.987 minus 31.956). The owner also confirmed database stock zero, exactly one transaction for the successful order, and no debit to the rejected buyer. Together with the observed UI outcomes, this closes A2 for this small two-buyer cross-instance test. It does not establish high-concurrency capacity, repeated race robustness, or overlap inside the inventory critical section.
+
+**HTTP behavior limitation:** the stock rejection returned HTTP 500, not a clean client-side stock-conflict response. The stock/accounting invariant passed, but error-status semantics remain a separate issue. Do not describe both API responses as correct, or claim the existing automated oversell script passed; that script accepts HTTP status >=400 with a stock-error message and was not executed in this UI run. No frozen application code was changed.
+
+No additional payment attempt is required to close this bounded result. No payment retry, stock reset, receipt confirmation or cleanup was performed. The owner can restore Core minimum capacity to one and disable access logging. Preserve exported source logs until report evidence is archived. The temporary CLI changes were not applied through Terraform; no staging Terraform apply was run by this operator. Restoration is pending owner confirmation.
 
 ## Outstanding external inputs
 
 - Scaling activity read access to verify the exact policy cause.
-- Staging disposable product, current funded-buyer fixture and no-overlap confirmation.
-- Owner-assisted ledger and instance-routing evidence for oversell.
+- Archive the owner-exported A2 source logs and confirm restoration of the temporary Core/logging settings; the routing and database audit results have been supplied.
 
 Initial preparation sent no live requests. A subsequent authorized production precheck is recorded below; no write requests were sent.
 
@@ -80,7 +92,7 @@ CloudWatch visually showed Search requests per target peaking around 1,750/minut
 
 This establishes an observed Search-only task-count increase from 1 to 2 following the burst. The operator did not change desired counts, policies or deployments. However, IAM denied `application-autoscaling:DescribeScalingActivities`, so the exact policy trigger/cause is not independently verified. The automatic-scaling page's incomplete display must not be interpreted as proof that no policy exists. Subsequent ECS events at 06:24 UTC show one task stopped, one target deregistered and the service returning to steady state. At 06:26 UTC, desired and running counts were both one, on the same task definition revision 5. The observed 1 → 2 → 1 cycle is therefore complete without operator scaling changes. The exact policy activity trail remains unavailable; no 1-to-4 or 200-VU capacity claim is made.
 
-No production orders, payments or seed changes were made. A2 remains pending dedicated staging fixtures and cross-instance evidence.
+No production orders, payments or seed changes were made. A2 was subsequently verified in the bounded two-buyer staging test above, with owner-reported routing and database audit evidence.
 
 ### Evidence files
 
@@ -146,4 +158,4 @@ k6 run \
 
 Replace the placeholders only after validating the supplied fixture and product. The script creates all orders first, then submits concurrent balance payments. It passes only if exactly one payment and persisted order are PAID, final stock is zero, and every unsuccessful payment is rejected specifically for stock. Authentication errors, timeouts and unrelated database errors do not count as correct stock rejection. The test does not automatically clean up orders, and setup failure can leave partial unpaid orders: record them privately and coordinate cleanup.
 
-To claim cross-instance correctness, retain owner-provided routing/log evidence showing requests reached distinct Core instances and a ledger/stock audit showing one charge with no unintended balance loss. Having two running instances alone is insufficient. Publish sanitized aggregates; retain account, token, order and balance details privately. A2 remains unexecuted until these prerequisites arrive.
+To claim cross-instance correctness, retain owner-provided routing/log evidence showing requests reached distinct Core instances and a ledger/stock audit showing one charge with no unintended balance loss. Having two running instances alone is insufficient. Publish sanitized aggregates; retain account, token, order and balance details privately. This command was not used for the UI run above; its automated concurrency assertions have not been executed in that run.

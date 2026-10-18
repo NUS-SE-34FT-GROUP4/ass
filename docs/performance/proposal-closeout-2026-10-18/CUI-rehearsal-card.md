@@ -39,7 +39,7 @@ The scheduled ramp/hold/down lasts 30 seconds; graceful completion may take long
 - Why did 50 VUs fail but 30 VUs pass? The environment and workload differed. We have not isolated a causal performance improvement.
 - Does zero error rate mean the 50-VU run passed? No. Read P95 exceeded 2 seconds, so the latency criterion failed.
 - Does a green SonarCloud gate mean 70% coverage? No. The measured service coverage is below target and the gate is a separate criterion.
-- Is cross-instance oversell verified? Not yet. Dedicated staging data is prepared, but funded balances, two healthy Core instances, concurrent execution and routing/ledger audit are still required.
+- Is cross-instance oversell verified? Yes, in one two-buyer staging test on 18 October. Owner-reported ALB records show distinct Core targets and about 31 ms of overlapping processing. One payment succeeded, one was stock-rejected, final stock was zero, and the owner confirmed one transaction with no rejected-buyer debit. This is not a high-concurrency result. The rejection returned HTTP 500; error-status semantics remain a separate limitation.
 
 ## Evidence and handoff
 
