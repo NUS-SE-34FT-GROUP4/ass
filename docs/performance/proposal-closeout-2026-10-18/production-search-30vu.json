@@ -1,0 +1,43 @@
+{
+  "environment": "production",
+  "path": "/api/search",
+  "start_utc": "2026-10-18T06:02:07Z",
+  "vus": 30,
+  "ramp": "30s",
+  "hold": "4m",
+  "down": "15s",
+  "writes": false,
+  "metrics": {
+    "http_reqs": {
+      "count": 7431,
+      "rate": 25.99512700948999
+    },
+    "http_req_failed": {
+      "passes": 0,
+      "fails": 7431,
+      "thresholds": {
+        "rate<0.01": false
+      },
+      "value": 0
+    },
+    "business_errors": {
+      "passes": 0,
+      "fails": 7431,
+      "thresholds": {
+        "rate<0.01": false
+      },
+      "value": 0
+    },
+    "read_search_ms": {
+      "med": 28.093667,
+      "p(95)": 85.53702099999984,
+      "p(99)": 413.77942119999994,
+      "max": 8279.04499
+    },
+    "checks": {
+      "passes": 7431,
+      "fails": 0,
+      "value": 1
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "environment": "production",
+  "endpoint": "/api/search",
+  "date": "2026-10-18",
+  "mode": "search",
+  "vus": 2,
+  "ramp": "5s",
+  "hold": "20s",
+  "down": "5s",
+  "writes": false,
+  "metrics": {
+    "http_reqs": {
+      "count": 45,
+      "rate": 1.4863429401853807
+    },
+    "http_req_failed": {
+      "passes": 0,
+      "fails": 45,
+      "thresholds": {
+        "rate<0.01": false
+      },
+      "value": 0
+    },
+    "read_search_ms": {
+      "med": 50.319791,
+      "p(95)": 487.75216439999963,
+      "p(99)": 1372.8765545199994,
+      "max": 1988.669168
+    },
+    "business_errors": {
+      "passes": 0,
+      "fails": 45,
+      "thresholds": {
+        "rate<0.01": false
+      },
+      "value": 0
+    },
+    "checks": {
+      "passes": 45,
+      "fails": 0,
+      "value": 1
+    }
+  }
+}
