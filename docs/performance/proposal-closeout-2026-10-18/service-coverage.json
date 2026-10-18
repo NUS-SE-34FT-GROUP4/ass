@@ -1,0 +1,32 @@
+{
+  "commit": "c3f8a435ef26031fe1121c970db3a13acd6c4bc0",
+  "run": 39040174201,
+  "artifact": 12104311068,
+  "scope": "packages containing /service, including /service/impl",
+  "rows": [
+    {
+      "module": "chat",
+      "package": "sg/edu/nus/iss/c2csectrade/chat/service",
+      "covered": 1,
+      "missed": 80
+    },
+    {
+      "module": "core",
+      "package": "sg/edu/nus/iss/c2csectrade/service",
+      "covered": 160,
+      "missed": 1324
+    },
+    {
+      "module": "core",
+      "package": "sg/edu/nus/iss/c2csectrade/service/impl",
+      "covered": 85,
+      "missed": 342
+    },
+    {
+      "module": "search",
+      "package": "sg/edu/nus/iss/c2csectrade/search/service",
+      "covered": 159,
+      "missed": 18
+    }
+  ]
+}
