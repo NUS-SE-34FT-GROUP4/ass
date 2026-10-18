@@ -42,7 +42,7 @@ On the measured main revision, 149 tests passed. Service-layer line coverage was
 
 [PR #70](https://github.com/NUS-SE-34FT-GROUP4/ass/pull/70) merged on 17 October at 14:18:15 UTC. Current main includes service latency, 5xx, unhealthy-target and CPU alarms plus RDS CPU/storage alarms in infra/terraform/env/alarms.tf. The coordinator reports C2 complete. The CI run above completed staging and production deploy/smoke jobs. Application deployment success alone is not independent proof of Terraform apply or live alarm state; retain the owner's apply/CloudWatch evidence for presentation.
 
-## A1: search-only scaling run — executed; scale-in evidence pending
+## A1: search-only scaling run — executed; observed 1 → 2 → 1 cycle
 
 Use the existing marketplace.js MODE=search with SEARCH_PATH=/api/search. Its default /api/products route goes through Core and is unsuitable for proving Search-only isolation. Terraform routes /api/search directly to Search; the search controller returns the array contract expected by the load script. Search mode uses anonymous reads and does not require buyer tokens unless production access is additionally restricted.
 
@@ -58,7 +58,7 @@ Verify at least two Core instances and correlate requests with instance/log evid
 
 ## Outstanding external inputs
 
-- Scaling activity read access and natural scale-in evidence.
+- Scaling activity read access to verify the exact policy cause.
 - Staging disposable product, current funded-buyer fixture and no-overlap confirmation.
 - Owner-assisted ledger and instance-routing evidence for oversell.
 
@@ -78,7 +78,7 @@ Started 06:02:07 UTC (14:02:07 Singapore); 30-second ramp to 30 VUs, four-minute
 
 CloudWatch visually showed Search requests per target peaking around 1,750/minute. The initial graph observation ended around 06:06 UTC and still showed one task; this was an incomplete observation window, not proof that scaling failed. ECS service events subsequently showed one additional Search task started and registered at 06:07 UTC, followed by a steady state at 06:08 UTC. At 06:13 UTC, Search had two desired/running tasks and two healthy targets, using task definition revision 5. Core and Chat were each observed at one running task in the cluster view at 06:12 UTC.
 
-This establishes an observed Search-only task-count increase from 1 to 2 following the burst. The operator did not change desired counts, policies or deployments. However, IAM denied `application-autoscaling:DescribeScalingActivities`, so the exact policy trigger/cause is not independently verified. The automatic-scaling page's incomplete display must not be interpreted as proof that no policy exists. Natural scale-in and the complete policy activity trail remain pending; no 1-to-4 or full scale-out/scale-in claim is made.
+This establishes an observed Search-only task-count increase from 1 to 2 following the burst. The operator did not change desired counts, policies or deployments. However, IAM denied `application-autoscaling:DescribeScalingActivities`, so the exact policy trigger/cause is not independently verified. The automatic-scaling page's incomplete display must not be interpreted as proof that no policy exists. Subsequent ECS events at 06:24 UTC show one task stopped, one target deregistered and the service returning to steady state. At 06:26 UTC, desired and running counts were both one, on the same task definition revision 5. The observed 1 → 2 → 1 cycle is therefore complete without operator scaling changes. The exact policy activity trail remains unavailable; no 1-to-4 or 200-VU capacity claim is made.
 
 No production orders, payments or seed changes were made. A2 remains pending dedicated staging fixtures and cross-instance evidence.
 
@@ -91,7 +91,7 @@ No production orders, payments or seed changes were made. A2 remains pending ded
 - `screenshots/search-2-running.jpg`: ECS Search desired/running count of two.
 - `screenshots/search-scale-out-curve.jpg`: CloudWatch desired/running count transition from one to two, with a UTC axis.
 
-At the 06:18 UTC ECS refresh, Search still had two desired/running tasks. No natural scale-in had been observed at that checkpoint.
+At the 06:18 UTC ECS refresh, Search still had two desired/running tasks. No natural scale-in had been observed at that checkpoint. By 06:26 UTC, the ECS console confirmed one desired/running task after the 06:24 UTC stop event. See `screenshots/search-back-to-one.jpg`. The console also denied `application-autoscaling:DescribeScalableTargets`; owner-provided activity/target evidence can close this remaining audit gap.
 
 ### P20 module counts (same CI artifact)
 
