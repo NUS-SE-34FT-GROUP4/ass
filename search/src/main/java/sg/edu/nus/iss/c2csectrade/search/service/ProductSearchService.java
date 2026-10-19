@@ -7,6 +7,7 @@ import org.opensearch.client.opensearch._types.query_dsl.BoolQuery;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.opensearch.client.opensearch.core.SearchRequest;
 import org.opensearch.client.opensearch.core.search.Hit;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import sg.edu.nus.iss.c2csectrade.search.document.ProductDocument;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Keyword search with filters and highlighting, ported from Core's
@@ -31,15 +33,25 @@ public class ProductSearchService {
     private final OpenSearchClient client;
     private final String index;
 
-    public ProductSearchService(OpenSearchClient client, @Value("${app.opensearch.index}") String index) {
+    public ProductSearchService(@Qualifier("searchQueryClient") OpenSearchClient client,
+                                @Value("${app.opensearch.index}") String index) {
         this.client = client;
         this.index = index;
     }
 
     public List<ProductDocument> search(ProductSearchQuery query) throws IOException {
-        return client.search(request(query), ProductDocument.class).hits().hits().stream()
-                .map(ProductSearchService::withHighlights)
-                .toList();
+        try {
+            return client.search(request(query), ProductDocument.class).hits().hits().stream()
+                    .map(ProductSearchService::withHighlights)
+                    .toList();
+        } catch (RuntimeException e) {
+            // No connection to OpenSearch came free in time (OpenSearchConfig):
+            // the client wraps that timeout in a RuntimeException
+            if (e.getCause() instanceof TimeoutException) {
+                throw new IOException("No connection to OpenSearch is free", e);
+            }
+            throw e;
+        }
     }
 
     SearchRequest request(ProductSearchQuery query) {
