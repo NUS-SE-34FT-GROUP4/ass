@@ -8,7 +8,6 @@ import sg.edu.nus.iss.c2csectrade.chat.repository.ChatMessageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -136,24 +135,13 @@ public class ChatMessageService {
                     .avatar(partner.getAvatarUrl() != null ? partner.getAvatarUrl() :
                         "https://ui-avatars.com/api/?name=" + partner.getUsername() + "&background=007bff&color=fff&size=100")
                     .lastMessage(lastMessage != null ? lastMessage.getContent() : "")
-                    .lastMessageTime(lastMessage != null && lastMessage.getTimestamp() != null ?
-                        convertToLocalDateTime(lastMessage.getTimestamp()) : null)
+                    .lastMessageTime(lastMessage != null ? lastMessage.getTimestamp() : null)
                     .unreadCount(unreadCount)
                     .isOnline(false) // TODO: implement online status
                     .build();
             })
             .filter(conv -> conv != null)
             .collect(Collectors.toList());
-    }
-
-    // Time conversion helper
-    private LocalDateTime convertToLocalDateTime(Date date) {
-        if (date == null) {
-            return null;
-        }
-        return date.toInstant()
-                .atZone(java.time.ZoneId.systemDefault())
-                .toLocalDateTime();
     }
 
     // All users (for broadcast messages)

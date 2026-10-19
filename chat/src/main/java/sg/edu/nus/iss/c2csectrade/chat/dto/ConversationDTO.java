@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.util.Date;
 
 @Data
 @Builder
@@ -17,7 +17,7 @@ public class ConversationDTO {
     private String displayName;
     private String avatar;
     private String lastMessage;
-    private LocalDateTime lastMessageTime;
+    private Date lastMessageTime;
     private Integer unreadCount;
     private Boolean isOnline;
 }
