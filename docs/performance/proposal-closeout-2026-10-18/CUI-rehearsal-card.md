@@ -1,6 +1,84 @@
-# CUI rehearsal card
+# CUI architecture defence and rehearsal card
 
-Evidence as of 18 October 2026. All results below belong to ass (5001).
+Reframed on 19 October 2026 against **01 Briefing.pdf**, Architecting Scalable Systems practice module, V2.6. All measured results refer to ass (5001), not c2cTradePlatform (5006). Presentation language: English.
+
+## What the briefing actually asks us to demonstrate
+
+Pages 3 and 5 emphasise scalable, robust and reliable backend architecture; platform engineering; appropriate cloud-native services; development/deployment automation; and minimum security controls. A working application demonstrates platform capabilities. Page 9 explicitly asks what scale is supported, how claims are proved, what cloud-native value is achieved, how new use cases reuse the platform, and what lifecycle work is automated. These are stated objectives and questions, not an invented detailed marking rubric.
+
+The marketplace provides a concrete workload and domain context. Do not make feature breadth the central claim. Equally, do not say functionality is irrelevant: selected working flows must exercise the architecture being defended. A broken message path matters if it is used to demonstrate cross-instance communication. Our self-recipient load checks do not establish buyer-to-seller delivery.
+
+CUI's contribution is to connect **quality requirement → architectural choice → measured evidence → trade-off and limit**. The team owns the full architecture narrative; CUI supplies performance, observability and validation evidence. Service owners primarily implement their unit/service tests; CUI reports coverage honestly rather than claiming sole responsibility for the target.
+
+## Main speaking script — approximately three minutes, excluding UI operation
+
+### P14 — bound work before scaling it
+
+“My part focuses on how we evaluated the architecture's performance and scalability. The marketplace is the workload we use to exercise the platform.
+
+Our first finding was that adding instances would not address an unbounded request. At just two concurrent users, the product-list endpoint returned more than ten thousand items in one response and took over eight seconds. Server-side pagination bounded the response work. In the low-load retest, all seventy-seven checks passed and browse P95 was eighty-four milliseconds. This validates the pagination fix under that workload; it does not establish maximum platform capacity.”
+
+### P19 — independent scaling and observable cloud behaviour
+
+“We separated Core, Search and Chat around different workload profiles and transaction responsibilities. This gives us a way to scale a busy service independently, rather than duplicate the entire application. The cost is additional deployment, communication and operational complexity.
+
+To exercise Search independently, our production test called the Search route directly. We used thirty virtual users and completed seven thousand four hundred and thirty-one requests, with no HTTP or business errors and a P95 of about eighty-six milliseconds.
+
+The captured task counts changed from one to two and then back to one. Core and Chat were each at one in sampled observations. We made no manual scaling changes during this run. This provides observed evidence of Search elasticity following the burst. YU subsequently supplied the activity and alarm-history summary: three consecutive minutes above one thousand requests per target triggered scale-out; fifteen minutes below nine hundred triggered scale-in. This is not proof of two-hundred-user capacity or linear scaling.
+
+The monitoring evidence matters because a successful HTTP response alone cannot prove that scaling occurred. We correlate client latency and errors with request-rate graphs, task counts and service events.”
+
+### P20 — correctness across instances and honest limits
+
+“Scaling also needs to preserve correctness. On staging, two buyers attempted to buy the last unit. The owner-provided load-balancer records show different Core instances handling the payments, with about thirty-one milliseconds of overlapping processing. One payment succeeded, the other was rejected for insufficient stock, and final stock was zero. The owner's database check confirmed one transaction and no debit to the rejected buyer.
+
+This is a small cross-instance correctness test, not a high-concurrency benchmark. The rejected request returned HTTP five hundred, which remains an error-status limitation.
+
+We distinguish measured results from unfinished targets. The separate fifty-user mixed staging run exceeded its latency threshold, and the two-hundred-user capacity test and fixed-instance comparison are unfinished. CI reported one hundred and forty-nine passing tests, but measured service-layer coverage was eighteen point six seven percent, below the proposed seventy percent. Our conclusion is that we have evidence for bounded request handling, observed Search elasticity, and one cross-instance stock-consistency scenario, with clear limits on the claims.”
+
+## Evidence to show, and why
+
+| Architectural question | Show | Defensible conclusion |
+|---|---|---|
+| Does each request have bounded work? | P14 pagination incident and retest | The specific unbounded-list defect was corrected; no universal capacity claim |
+| Can the service footprint change independently? | P19 baseline, request rate, two-task state, return-to-one screenshots | Search 1 → 2 → 1 observed; Core/Chat sampled at one; policy cause supported by YU’s export summary |
+| Does a write invariant survive multiple instances? | A2 success/rejection/stock screenshots and owner log/database summary | One bounded two-buyer scenario preserved stock and charge outcomes |
+| Can we detect an unacceptable result? | 50-VU latency-gate failure and monitoring | Zero errors alone is insufficient; latency can fail acceptance |
+| Are quality claims auditable? | P20 CI and coverage evidence | Passing tests, coverage and capacity are different measures |
+
+Use saved evidence first. The optional short command below demonstrates repeatable tooling, not autoscaling. A full storefront tour is the team's application demonstration; CUI should explain the architecture exercised by a selected flow instead of narrating every button.
+
+## Likely architecture questions and answers
+
+**Why these three services rather than a monolith or many small services?**
+Core keeps closely coupled business writes within one service transaction, while Search and Chat have different load and connection patterns. The split permits independent scaling. A monolith is operationally simpler; finer splitting adds distributed transaction and failure-handling work. Three services are a pragmatic project boundary, not a universal optimum.
+
+**What remains a scaling bottleneck?**
+The services still share a database instance/schema. Scaling stateless application tasks does not remove database contention, connection limits or expensive queries. Separate service database users improve access isolation, not storage or capacity isolation. Database behaviour and longer steady-state load need further measurement before claiming a capacity ceiling.
+
+**What value does the cloud add?**
+Fargate reduces host management; managed persistence services reduce operational work; load balancing and service scaling provide elasticity mechanisms. Our measured example is the Search task-count cycle. Costs include managed-service expense, startup delay, quotas and provider dependence. We have not measured cost savings.
+
+**Why is Search a separate read model?**
+It can serve search-oriented queries and evolve independently from authoritative business records. The cost is eventual consistency and index-rebuild/failure handling. Do not imply the search index is the source of truth or that an outage/fallback test was performed by CUI in this run.
+
+**How does platform engineering matter beyond this marketplace?**
+Accounts, listing/search APIs and messaging provide candidate reusable capabilities for additional applications. Explain the concrete APIs and producer/consumer roles in the team's design. A new use case could reuse those capabilities, but we have not measured implementation-effort savings or proven reuse across multiple deployed applications.
+
+**Does A2 prove the locking mechanism is correct under all races?**
+No. It demonstrates the observed invariant in one two-instance, two-buyer scenario, supported by owner-reported routing and database checks. It does not isolate the internal locking mechanism or prove repeated/high-load correctness. The 31 ms request-processing overlap does not prove overlap inside the inventory critical section.
+
+**Is cross-instance messaging proven by your load test?**
+No. Our load checks used a self-recipient on one connection. Paired-user delivery, offline recovery and multiple-instance routing need separate evidence. Attribute any teammate's independent test accurately; do not substitute the self-recipient count for that evidence.
+
+**Can the platform support 200 concurrent users?**
+Not established by our completed tests. VUs are a workload setting, not a universal supported-user count. The planned long run and fixed-one-task comparison remain incomplete. Thirty-VU Search and fifty-VU mixed staging results differ in workload/environment and are not a controlled before/after comparison.
+
+**How does automation help?**
+Repeatable load scripts, CI tests/scanning and the deployment pipeline reduce manual variation and provide traceable results. Show the six-job pipeline already described in P17; SonarCloud is inside the backend job. Production promotion uses manual approval. We have not quantified engineering-hours saved.
+
+**Why is coverage below target despite passing CI?**
+Passing tests establish only the tested assertions. Service-layer coverage is below the proposed target, and the configured SonarCloud gate is a different criterion. Treat this as a team quality gap, not proof that every untested path is broken or that every workflow is verified.
 
 ## Numbers to quote
 
@@ -10,7 +88,7 @@ Evidence as of 18 October 2026. All results below belong to ass (5001).
 | Pagination retest, 2 VUs | 77 checks passed; browse P95 84 ms; search P95 624 ms; overall read median 128 ms / P95 536 ms | Low-load pagination validation, not single-user or capacity evidence |
 | Staging 50 VUs, 17 Oct | Stopped after about 124 s; read P95 2,078 ms; search P95 2,307 ms; HTTP/business errors 0 | Latency threshold failed; cause was not established |
 | Production search burst, 18 Oct | 30 VUs; 7,431 requests; errors 0; P95 85.54 ms; max 8,279.04 ms | Different environment and workload; not a controlled improvement over the 50-VU mixed run |
-| Production Search tasks | 1 → 2 → 1; extra task start 14:07, task stop 14:24 Singapore | Sampled Core/Chat counts stayed at 1; exact policy-cause records await permissions |
+| Production Search tasks | 1 → 2 → 1; extra task start 14:07, task stop 14:24 Singapore | Sampled Core/Chat counts stayed at 1; policy cause supplied by YU; see search-scaling-cause-owner-summary.md |
 | CI tests | 149 passed: Core 84 / Search 40 / Chat 25 | Zero failures, errors, skips on measured revision c3f8a43 |
 | Service-layer line coverage | 18.67% overall; Core 12.82%, Search 89.83%, Chat 1.23% | 70% proposal target not met; not enforced by a separate CI rule |
 | Whole-module line coverage | 23.98% overall | Different denominator from service-layer coverage |
@@ -25,39 +103,16 @@ k6 run -e BASE_URL=https://d28v51gtznejrx.cloudfront.net -e MODE=search -e SEARC
 
 The scheduled ramp/hold/down lasts 30 seconds; graceful completion may take longer. This command retains the script's end-of-run thresholds; it does not add early-abort protection. If the demo fails, stop with Ctrl+C and use saved evidence. Do not increase VUs or retry repeatedly on stage. Two VUs are not expected to demonstrate scale-out: show the previously captured 1 → 2 → 1 evidence separately. No new production run was executed while preparing this card.
 
-## 80-second speaking sequence
+## Delivery and evidence checklist
 
-- 0–15 s: “We first found an unbounded product list at only two concurrent users. Pagination fixed that specific defect; the retest passed 77 checks.”
-- 15–45 s: Show baseline, request-rate peak, two-task state and return-to-one screenshots. “The production search-only burst was followed by a 1 → 2 → 1 task-count cycle. We made no manual scaling or deployment changes.”
-- 45–65 s: Show the short command and its output if a live window is agreed. “This illustrates the script, not system capacity, and this small run is not expected to trigger scaling.”
-- 65–80 s: “The separate 50-VU staging mixed run exceeded the latency threshold. We have not completed the proposed 200-VU test or fixed-task comparison. Coverage is measured honestly: 18.67% service-layer coverage against a 70% target.”
+- Report and screenshots: https://github.com/NUS-SE-34FT-GROUP4/ass/pull/71
+- CI evidence: https://github.com/NUS-SE-34FT-GROUP4/ass/actions/runs/39040174201
+- Search screenshot order under `screenshots/`: search-baseline.jpg, search-request-rate.jpg, search-scale-out-curve.jpg, search-2-running.jpg, search-back-to-one.jpg.
+- A2 raw screenshots are retained privately. The owner supplied log/database conclusions through the user; the raw exported logs have not been delivered to this workspace. Do not claim independent raw-log inspection.
+- The user confirmed Core capacity restoration and access logging disabled. No further A2 run is planned.
+- Production account names supplied: demo_buyer and seller_lvl1 through seller_lvl5. Select the seller owning the demonstration item; credentials must stay outside this document and Git.
+- Team-owned items: final demo operator assignment, seller/item pairing, fallback recording and rehearsal timing. Do not reseed products that have orders.
+- No original load-test video was captured; label a later screenshot walkthrough as retrospective evidence review.
+- P19/P20 notes and body were updated separately. This revised card does not silently change other speakers' assignments or replace the shared slides.
 
-## Questions and precise answers
-
-- Can it handle 200 concurrent users? Not established. The proposed five-minute ramp / fifteen-minute hold and fixed-one-task comparison remain uncompleted.
-- Did all three services scale? We observed Search 1 → 2 → 1; Core and Chat were each 1 in sampled observations. Do not claim all three scaled or that Search reached 4.
-- Why did 50 VUs fail but 30 VUs pass? The environment and workload differed. We have not isolated a causal performance improvement.
-- Does zero error rate mean the 50-VU run passed? No. Read P95 exceeded 2 seconds, so the latency criterion failed.
-- Does a green SonarCloud gate mean 70% coverage? No. The measured service coverage is below target and the gate is a separate criterion.
-- Is cross-instance oversell verified? Yes, in one two-buyer staging test on 18 October. Owner-reported ALB records show distinct Core targets and about 31 ms of overlapping processing. One payment succeeded, one was stock-rejected, final stock was zero, and the owner confirmed one transaction with no rejected-buyer debit. This is not a high-concurrency result. The rejection returned HTTP 500; error-status semantics remain a separate limitation.
-
-## Evidence and handoff
-
-Report and screenshots: https://github.com/NUS-SE-34FT-GROUP4/ass/pull/71
-
-CI source: https://github.com/NUS-SE-34FT-GROUP4/ass/actions/runs/39040174201
-
-Screenshot sequence in this directory: search-baseline.jpg → search-request-rate.jpg → search-scale-out-curve.jpg → search-2-running.jpg → search-back-to-one.jpg (all under screenshots/).
-
-No original load-test video was captured. A retrospective walkthrough may show these real screenshots, but must be labelled as such. A new live capture requires another coordinated window. No seed script should be rerun against demo products with existing orders.
-
-Final operator/user-flow speaker assignment belongs to the team. CUI owns only the load/scaling narration here. Do not overwrite teammates' current assignments based on older scripts.
-
-## Final evidence and handoff checklist
-
-- A1: five Search scaling screenshots and both search-run summaries are in this report folder. Exact scaling-policy activity records remain unavailable. No original run video was captured.
-- A2: private local screenshots record stock rejection, payment success, persisted unpaid/paid orders, final stock zero and both post-payment balances. The source ALB files and database audit were summarized by the owner through the user; the raw export has not yet been delivered to this workspace. Preserve it for traceability.
-- P19/P20 speaker notes now include the bounded A2 result, owner-reported routing/database provenance, approximately 31 ms overlap and HTTP 500 limitation.
-- Owner action pending: restore Core minimum capacity to one and disable ALB logging; retain exported logs until archived. No further test is planned for this closeout.
-- Remaining proposal deviations: 200-VU capacity and fixed-one-task comparison not executed; service-layer coverage 18.67%, below 70%. Do not present these as completed.
-- Team handoff pending: final seller account, recording location and rehearsal run sheet. Do not reseed products with orders.
+Briefing page 6 labels its presentation dates tentative; use the team's current confirmed schedule. Do not infer a new deadline from that slide.
