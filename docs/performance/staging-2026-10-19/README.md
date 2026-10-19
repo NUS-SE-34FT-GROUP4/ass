@@ -33,3 +33,37 @@ The 17 October mixed run also failed the two-second read-P95 gate. This run agai
 The latest workflow remained 39212398092 during/following the test; its staging deployment completed before the run. Production deployment ran separately during the window. No new staging deployment was observed through these workflow checks; continuous infrastructure/deployment monitoring was not captured. This run does not establish scaling effectiveness or infrastructure capacity.
 
 The generator is stopped. Private fixtures, raw time series and pre-run balance snapshots are retained locally outside Git. Summary files contain aggregate measurements only. Review test-order side effects with the environment owner before reseeding. No higher-load or fixed-versus-autoscaling run is justified until this failure is investigated.
+
+## Follow-up: service-log observations
+
+Read-only ECS log inspection after the run found repeated Core messages at
+15:04 Singapore time (07:04 UTC), within the test window:
+
+> Search service unavailable: I/O error on GET request for
+> "http://search.c2csectrade-staging.internal:8080/api/search": Read timed out;
+> searching the database instead
+
+The visible Core task was `ffecb19f8bad4828ad7469ea565371ba`.
+This confirms that at least some keyword searches timed out on the internal
+Core-to-Search call and used the database fallback. Successful final HTTP
+responses therefore do not demonstrate successful Search-service execution.
+The sampled log page is not a complete event count or a request-level trace.
+
+Source inspection at deployed commit
+`e520b21d51db6c1237d1b7a0ed482b8392d7b06c` confirms that `SearchClient` defaults
+its connection and read timeouts to two seconds (`app.search.timeout`). Runtime
+overrides were not independently verified. Timeout plus fallback is consistent
+with the approximately 2.3-second search P95; individual latency samples have
+not been correlated to individual log events.
+
+Search logs also contain `Search failed` at `2026-10-19T07:05:10.611Z`, with
+`AsyncRequestNotUsableException` / `ClientAbortException` and `Broken pipe`
+while writing a response. This sample is shortly after the load generator's
+last recorded point. It is consistent with a disconnected caller, but does not
+establish why Search was slow or prove that every Search error has this cause.
+
+The remaining diagnosis is to correlate Search/OpenSearch latency, CPU, memory,
+connection/thread saturation and task health with 07:02–07:05 UTC. No underlying
+resource bottleneck is claimed from these log samples alone. Keep the 200-VU
+stage blocked until the 50-VU latency gate passes. Application code and timeout
+settings were not changed during this investigation.
