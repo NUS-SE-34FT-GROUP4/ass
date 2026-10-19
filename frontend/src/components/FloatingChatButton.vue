@@ -170,7 +170,7 @@ const onMessageReceived = (payload) => {
 
     // Refresh the conversation list to update unread counts
     if (!isAdmin.value || (isAdmin.value && !currentChatUser.value)) {
-      loadConversations();
+      loadConversations(true);
     }
   } catch (error) {
     console.error('[WS] Failed to handle message:', error);
@@ -229,9 +229,12 @@ const closeChat = () => {
   currentChatUser.value = null;
 };
 
-// Load the conversation list
-const loadConversations = async () => {
-  loading.value = true;
+// Load the conversation list. Silent refreshes keep the list on screen so
+// the panel does not flash every time the poller or a WebSocket push runs.
+const loadConversations = async (silent = false) => {
+  if (!silent) {
+    loading.value = true;
+  }
   try {
     const token = localStorage.getItem('jwt_token');
     if (!token) return;
@@ -262,23 +265,15 @@ const loadConversations = async () => {
   }
 };
 
-// Format the time for display
+// Format the time for display. Absolute timestamps keep the text stable
+// between refreshes instead of ticking "N min ago" every minute.
 const formatTime = (timestamp) => {
   if (!timestamp) return '';
 
-  const now = new Date();
   const time = new Date(timestamp);
-  const diff = now - time;
+  const now = new Date();
 
-  // Within a minute
-  if (diff < 60000) {
-    return 'Just now';
-  }
-  // Within an hour
-  if (diff < 3600000) {
-    return `${Math.floor(diff / 60000)} min ago`;
-  }
-  // Today
+  // Today: show HH:MM only
   if (now.toDateString() === time.toDateString()) {
     return time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
   }
@@ -286,10 +281,11 @@ const formatTime = (timestamp) => {
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   if (yesterday.toDateString() === time.toDateString()) {
-    return 'Yesterday';
+    return 'Yesterday ' + time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
   }
-  // Earlier
-  return time.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+  // Earlier: date + time
+  return time.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) + ' ' +
+         time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 };
 
 const getCurrentUser = () => {
@@ -380,7 +376,8 @@ const selectConversation = async (conv) => {
 const startRefreshInterval = () => {
   refreshInterval = setInterval(() => {
     if (authStore.isLoggedIn && showChat.value && !isAdmin.value) {
-      loadConversations();
+      // Silent refresh: update data in place without flashing the panel
+      loadConversations(true);
     }
   }, 10000); // Every 10 seconds
 };
