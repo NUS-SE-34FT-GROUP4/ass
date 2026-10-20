@@ -236,6 +236,7 @@ Each core module has its own Markdown document in `docs/` describing its design 
 - [Docker configuration guide](docs/docker-configuration-guide.md)
 - [Distributed system architecture](docs/distributed-system-architecture.md)
 - [Deployment and usage guide](docs/deployment-and-usage-guide.md)
+- [CI/CD](docs/ci-cd.md)
 - [User authentication and management](docs/user-authentication-and-management.md)
 - [Product listing and management](docs/product-listing-and-management.md)
 - [Shopping cart](docs/shopping-cart.md)
