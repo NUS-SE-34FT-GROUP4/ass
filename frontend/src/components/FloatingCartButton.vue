@@ -33,7 +33,7 @@
               </div>
               <div class="item-info" @click="goToProduct(item.product.id)">
                 <h4 class="item-title">{{ item.product.name }}</h4>
-                <div class="item-price">¥{{ item.product.price }}</div>
+                <div class="item-price">S${{ item.product.price }}</div>
                 <div class="item-quantity">
                   <button @click.stop="decreaseQuantity(item)" class="qty-btn">-</button>
                   <span class="qty-value">{{ item.quantity }}</span>
@@ -49,7 +49,7 @@
           <div class="cart-summary">
             <div class="summary-row">
               <span>Total:</span>
-              <span class="total-price">¥{{ totalPrice.toFixed(2) }}</span>
+              <span class="total-price">S${{ totalPrice.toFixed(2) }}</span>
             </div>
             <button class="checkout-btn" @click="goToCheckout">
               Checkout ({{ totalQuantity }} items)

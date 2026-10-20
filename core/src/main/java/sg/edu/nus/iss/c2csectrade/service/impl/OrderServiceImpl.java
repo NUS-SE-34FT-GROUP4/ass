@@ -292,8 +292,8 @@ public class OrderServiceImpl implements OrderService {
 
             // Check the balance is sufficient
             if (currentBalance.compareTo(order.getTotalAmount()) < 0) {
-                throw new RuntimeException("Insufficient balance. Balance: ¥" + currentBalance.toPlainString() +
-                                         ", amount due: ¥" + order.getTotalAmount().toPlainString());
+                throw new RuntimeException("Insufficient balance. Balance: S$" + currentBalance.toPlainString() +
+                                         ", amount due: S$" + order.getTotalAmount().toPlainString());
             }
 
             // Deduct the balance

@@ -32,7 +32,7 @@
             </div>
             <div class="item-info" @click="goToProduct(product.id)">
               <h4 class="item-title">{{ product.name }}</h4>
-              <div class="item-price">¥{{ product.price }}</div>
+              <div class="item-price">S${{ product.price }}</div>
               <div class="item-meta">
                 <span v-if="product.stock">Stock: {{ product.stock }}</span>
               </div>

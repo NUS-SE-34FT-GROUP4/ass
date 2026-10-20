@@ -20,7 +20,7 @@
         <div class="product-placeholder" v-else>📷</div>
         <div class="product-info">
           <h2>{{ product?.name }}</h2>
-          <div class="original-price">Original price: ¥{{ bargainActivity.originalPrice }}</div>
+          <div class="original-price">Original price: S${{ bargainActivity.originalPrice }}</div>
         </div>
       </div>
 
@@ -50,8 +50,8 @@
         <!-- Price display -->
         <div class="price-section">
           <div class="current-price-label">Current price</div>
-          <div class="current-price">¥{{ bargainActivity.currentPrice }}</div>
-          <div class="target-price">Target price: ¥{{ bargainActivity.targetPrice }}</div>
+          <div class="current-price">S${{ bargainActivity.currentPrice }}</div>
+          <div class="target-price">Target price: S${{ bargainActivity.targetPrice }}</div>
         </div>
 
         <!-- Progress bar -->
@@ -61,7 +61,7 @@
           </div>
           <div class="progress-text">
             {{ progressPercentage.toFixed(1) }}% cut
-            <span class="remaining">¥{{ remainingAmount }} to go</span>
+            <span class="remaining">S${{ remainingAmount }} to go</span>
           </div>
         </div>
 
@@ -80,7 +80,7 @@
             class="btn-buy-success"
             @click="buyAtBargainPrice"
           >
-            💰 Buy Now (¥{{ bargainActivity.currentPrice }})
+            💰 Buy Now (S${{ bargainActivity.currentPrice }})
           </button>
 
           <!-- Bargain in progress -->
@@ -91,7 +91,7 @@
                 📤 Share with Friends
               </button>
               <button class="btn-abandon" @click="abandonAndBuy">
-                💳 Stop Bargaining and Buy (¥{{ bargainActivity.currentPrice }})
+                💳 Stop Bargaining and Buy (S${{ bargainActivity.currentPrice }})
               </button>
             </div>
             <!-- A helper -->
@@ -156,7 +156,7 @@
               <div class="helper-name">{{ help.helperName }}</div>
               <div class="helper-time">{{ formatTime(help.createdAt) }}</div>
             </div>
-            <div class="cut-amount">-¥{{ help.cutAmount }}</div>
+            <div class="cut-amount">-S${{ help.cutAmount }}</div>
           </div>
         </div>
       </div>
@@ -316,7 +316,7 @@ const helpBargain = async () => {
     const response = await axios.post(`/api/bargain/help/${route.params.id}`);
     const result = response.data;
 
-    toast(`You cut ¥${result.help.cutAmount}!`, 'success');
+    toast(`You cut S$${result.help.cutAmount}!`, 'success');
 
     // Update the data
     bargainActivity.value = result.activity;
@@ -340,7 +340,7 @@ const helpBargain = async () => {
 
 // Give up the bargain and buy at the current price
 const abandonAndBuy = async () => {
-  if (!confirm(`Stop bargaining and buy at the current price of ¥${bargainActivity.value.currentPrice}?`)) {
+  if (!confirm(`Stop bargaining and buy at the current price of S$${bargainActivity.value.currentPrice}?`)) {
     return;
   }
 

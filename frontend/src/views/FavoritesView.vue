@@ -31,7 +31,7 @@
         </div>
         <div class="product-info">
           <h3 class="product-name">{{ product.name }}</h3>
-          <div class="product-price">¥{{ product.price }}</div>
+          <div class="product-price">S${{ product.price }}</div>
           <div class="product-meta">
             <span>Condition: {{ product.conditionLevel }}/10</span>
             <span v-if="product.stock">Stock: {{ product.stock }}</span>

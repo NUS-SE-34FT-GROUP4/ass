@@ -56,7 +56,7 @@
         <div class="order-body">
           <div class="order-amount">
             <span class="label">Order total:</span>
-            <span class="amount">¥{{ order.totalAmount }}</span>
+            <span class="amount">S${{ order.totalAmount }}</span>
           </div>
 
           <div v-if="order.paymentMethod" class="order-payment">
@@ -148,7 +148,7 @@
           <div class="order-body">
             <div class="order-amount">
               <span class="label">Order total:</span>
-              <span class="amount">¥{{ order.totalAmount }}</span>
+              <span class="amount">S${{ order.totalAmount }}</span>
             </div>
 
             <div v-if="order.paymentMethod" class="order-payment">
@@ -231,15 +231,15 @@
               <div class="price-info">
                 <div class="price-row">
                   <span class="label">Original:</span>
-                  <span class="original-price">¥{{ bargain.originalPrice }}</span>
+                  <span class="original-price">S${{ bargain.originalPrice }}</span>
                 </div>
                 <div class="price-row">
                   <span class="label">Current:</span>
-                  <span class="current-price">¥{{ bargain.currentPrice }}</span>
+                  <span class="current-price">S${{ bargain.currentPrice }}</span>
                 </div>
                 <div class="price-row">
                   <span class="label">Target:</span>
-                  <span class="target-price">¥{{ bargain.targetPrice }}</span>
+                  <span class="target-price">S${{ bargain.targetPrice }}</span>
                 </div>
               </div>
 

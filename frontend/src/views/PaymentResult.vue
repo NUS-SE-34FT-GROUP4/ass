@@ -16,7 +16,7 @@
           </div>
           <div class="detail-item">
             <span class="label">Amount paid:</span>
-            <span class="value amount">¥{{ amount }}</span>
+            <span class="value amount">S${{ amount }}</span>
           </div>
           <div class="detail-item">
             <span class="label">Payment method:</span>
