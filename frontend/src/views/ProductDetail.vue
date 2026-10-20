@@ -75,7 +75,7 @@
       <!-- Product information -->
       <div class="product-info">
         <h1 class="product-title">{{ product.name }}</h1>
-        <div class="product-price">¥{{ product.price }}</div>
+        <div class="product-price">S${{ product.price }}</div>
         <div class="product-meta">
           <div class="meta-item" v-if="product.category">
             <span class="meta-label">Category:</span>

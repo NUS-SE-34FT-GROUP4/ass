@@ -45,7 +45,7 @@
 
             <div class="product-info">
               <h3 class="product-name">{{ product.name }}</h3>
-              <p class="product-price">¥{{ product.price }}</p>
+              <p class="product-price">S${{ product.price }}</p>
               <div class="product-meta">
                 <span v-if="product.category" class="category">{{ product.category }}</span>
                 <span v-if="product.location" class="location">📍 {{ product.location }}</span>

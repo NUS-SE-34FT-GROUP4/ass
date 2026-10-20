@@ -18,7 +18,7 @@
           </div>
           <div class="balance-display">
             <span class="balance-label">💰 Balance:</span>
-            <span class="balance-amount">¥{{ userBalance.toFixed(2) }}</span>
+            <span class="balance-amount">S${{ userBalance.toFixed(2) }}</span>
           </div>
         </div>
       </div>
@@ -128,7 +128,7 @@
         </div>
         <div class="product-info">
           <h3 class="product-name" v-html="product.highlightedName || product.name"></h3>
-          <div class="product-price">¥{{ product.price }}</div>
+          <div class="product-price">S${{ product.price }}</div>
           <div class="product-meta">
             <span v-if="product.conditionLevel">Condition {{ product.conditionLevel }}/10</span>
             <span v-if="product.location" class="location">📍{{ product.location }}</span>

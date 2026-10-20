@@ -20,12 +20,12 @@
 
         <div class="summary-item">
           <span>Subtotal</span>
-          <span class="amount">¥{{ order.totalAmount }}</span>
+          <span class="amount">S${{ order.totalAmount }}</span>
         </div>
         <div class="summary-divider"></div>
         <div class="summary-item total">
           <span>Amount due</span>
-          <span class="total-amount">¥{{ order.totalAmount }}</span>
+          <span class="total-amount">S${{ order.totalAmount }}</span>
         </div>
       </div>
 
@@ -69,7 +69,7 @@
           @click="confirmPayment"
           :disabled="!selectedMethod || processing"
         >
-          <span v-if="!processing">Pay Now ¥{{ order?.totalAmount || 0 }}</span>
+          <span v-if="!processing">Pay Now S${{ order?.totalAmount || 0 }}</span>
           <span v-else>Processing...</span>
         </button>
       </div>
@@ -84,7 +84,7 @@
           <div class="dialog-body">
             <div class="payment-info">
               <div class="payment-method-icon">{{ currentMethodIcon }}</div>
-              <div class="payment-amount">¥{{ order?.totalAmount || 0 }}</div>
+              <div class="payment-amount">S${{ order?.totalAmount || 0 }}</div>
             </div>
             <div class="password-input-container">
               <input
@@ -162,7 +162,7 @@ const paymentMethods = computed(() => [
     id: 'balance',
     name: 'Balance',
     icon: '💰',
-    description: `Current balance: ¥${userBalance.value.toFixed(2)}`,
+    description: `Current balance: S$${userBalance.value.toFixed(2)}`,
     disabled: userBalance.value < (order.value?.totalAmount || 0)
   }
 ]);

@@ -44,7 +44,7 @@
               <span>Condition: {{ item.product.conditionLevel }}/10</span>
               <span v-if="item.product.stock">Stock: {{ item.product.stock }}</span>
             </div>
-            <div class="item-price">¥{{ item.product.price }}</div>
+            <div class="item-price">S${{ item.product.price }}</div>
           </div>
           <div class="item-quantity">
             <button @click="decreaseQuantity(item)" class="qty-btn">-</button>
@@ -58,7 +58,7 @@
             <button @click="increaseQuantity(item)" class="qty-btn">+</button>
           </div>
           <div class="item-subtotal">
-            ¥{{ (item.product.price * item.quantity).toFixed(2) }}
+            S${{ (item.product.price * item.quantity).toFixed(2) }}
           </div>
           <button @click="removeItem(item)" class="btn-remove">
             🗑️ Remove
@@ -84,7 +84,7 @@
         </div>
         <div class="summary-row total">
           <span>Total:</span>
-          <span class="total-price">¥{{ selectedPrice.toFixed(2) }}</span>
+          <span class="total-price">S${{ selectedPrice.toFixed(2) }}</span>
         </div>
         <button
           class="btn btn-checkout"

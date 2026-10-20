@@ -25,7 +25,7 @@
         <div class="product-details">
           <h3 class="product-name">{{ product.name }}</h3>
           <div class="product-meta">
-            <span class="meta-price">¥{{ product.price }}</span>
+            <span class="meta-price">S${{ product.price }}</span>
             <span class="meta-stock">Stock: {{ product.stock }}</span>
             <span class="meta-condition">Condition {{ product.conditionLevel }}/10</span>
           </div>
@@ -55,7 +55,7 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label>Price (¥)</label>
+              <label>Price (S$)</label>
               <input v-model.number="editForm.price" type="number" step="0.01" class="form-input" />
             </div>
             <div class="form-group">

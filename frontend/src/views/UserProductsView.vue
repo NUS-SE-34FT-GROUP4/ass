@@ -34,7 +34,7 @@
           </div>
           <div class="product-info">
             <h3 class="product-name" @click="goToProduct(product.id)">{{ product.name }}</h3>
-            <p class="product-price">¥{{ product.price }}</p>
+            <p class="product-price">S${{ product.price }}</p>
             <div class="product-meta">
               <span v-if="product.conditionLevel">Condition {{ product.conditionLevel }}/10</span>
               <span v-if="product.location" class="location">📍{{ product.location }}</span>

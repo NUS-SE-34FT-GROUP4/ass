@@ -38,9 +38,9 @@
 
       <div class="form-row">
         <div class="form-group">
-          <label>Price (¥) *</label>
+          <label>Price (S$) *</label>
           <input v-model.number="product.price" type="number" step="0.01" min="0.01" max="99999999.99" placeholder="0.00" required />
-          <p class="help-text" style="font-size: 12px; color: #666; margin-top: 4px;">Maximum price: ¥99,999,999.99</p>
+          <p class="help-text" style="font-size: 12px; color: #666; margin-top: 4px;">Maximum price: S$99,999,999.99</p>
         </div>
 
         <div class="form-group">
@@ -194,7 +194,7 @@ const handleSubmit = async () => {
   }
 
   if (product.price > 99999999.99) {
-    toast('Price must not exceed ¥99,999,999.99', 'warning');
+    toast('Price must not exceed S$99,999,999.99', 'warning');
     return;
   }
 
