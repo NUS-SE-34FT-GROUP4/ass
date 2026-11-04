@@ -14,6 +14,7 @@ import sg.edu.nus.iss.c2csectrade.mapper.ProductMapper;
 import sg.edu.nus.iss.c2csectrade.mapper.TransactionMapper;
 import sg.edu.nus.iss.c2csectrade.mapper.UserMapper;
 import sg.edu.nus.iss.c2csectrade.service.impl.OrderServiceImpl;
+import org.springframework.security.access.AccessDeniedException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -243,7 +244,7 @@ class OrderLifecycleTest {
         when(orderMapper.findById(1)).thenReturn(order("PENDING"));
 
         assertThatThrownBy(() -> orderService.payOrder(1, 5, payment("card", "123456")))
-                .hasMessageContaining("Unauthorized");
+                .isInstanceOf(AccessDeniedException.class);
         verifyNoInteractions(userMapper);
     }
 

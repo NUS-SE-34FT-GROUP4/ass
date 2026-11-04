@@ -216,7 +216,7 @@ public class OrderServiceImpl implements OrderService {
 
         // Check the order belongs to the user
         if (!order.getUserId().equals(userId)) {
-            throw new RuntimeException("Unauthorized to pay this order");
+            throw new AccessDeniedException("Only the buyer can pay for this order");
         }
 
         // Check the payment password format
