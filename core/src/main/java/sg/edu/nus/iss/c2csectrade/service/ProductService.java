@@ -317,6 +317,7 @@ public class ProductService {
         }
     }
 
+    @Transactional
     public void delistProduct(Long id) {
         Product product = productMapper.selectById(id);
         if (product != null) {
