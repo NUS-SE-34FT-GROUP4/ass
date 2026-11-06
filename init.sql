@@ -88,9 +88,8 @@ CREATE TABLE `chat_message` (
     `is_system_message` BOOLEAN NOT NULL DEFAULT FALSE COMMENT 'Is it a system message',
     PRIMARY KEY (`id`),
     INDEX `idx_sender_recipient` (`sender_id`, `recipient_id`),
-    INDEX `idx_recipient_read` (`recipient_id`, `is_read`),
-    CONSTRAINT `fk_chat_message_sender` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT `fk_chat_message_recipient` FOREIGN KEY (`recipient_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+    -- User IDs are logical references to Core; Chat owns message retention.
+    INDEX `idx_recipient_read` (`recipient_id`, `is_read`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Chat messages table';
 
 -- Table `pms_product`
